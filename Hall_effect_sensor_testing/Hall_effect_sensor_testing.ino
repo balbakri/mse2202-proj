@@ -1,3 +1,4 @@
+//code for testing hall effect sensor
 void setup() {
 Serial.begin(9600);
 
