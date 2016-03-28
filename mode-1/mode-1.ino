@@ -12,15 +12,23 @@
 //#define DEBUG_MOTORS
 //#define DEBUG_LINE_TRACKERS
 //#define DEBUG_ENCODERS
-#define DEBUG_ULTRASONIC
+//#define DEBUG_ULTRASONIC_FRONT
+//#define DEBUG_ULTRASONIC_RIGHT
+//#define DEBUG_ULTRASONIC_LEFT
 //#define DEBUG_LINE_TRACKER_CALIBRATION
 //#define DEBUG_MOTOR_CALIBRATION
 
 boolean bt_Motors_Enabled = true;
 
 //port pin constants
-const int ci_Ultrasonic_Ping = 2;   //input plug
-const int ci_Ultrasonic_Data = 3;   //output plug
+const int ci_Ultrasonic_Data_Front = 2;   //output plug
+const int ci_Ultrasonic_Ping_Front = 3;   //input plug
+//right side ultrasonic
+const int ci_Ultrasonic_Data_Right = 4;   //output plug
+const int ci_Ultrasonic_Ping_Right = 5;   //input plug
+//left side ultrasonic
+const int ci_Ultrasonic_Data_Left = 6;   //output plug
+const int ci_Ultrasonic_Ping_Left = 7;   //input plug
 
 const int ci_Charlieplex_LED1 = 4;
 const int ci_Charlieplex_LED2 = 5;
@@ -46,7 +54,10 @@ const int ci_Middle_Line_Tracker_LED = 9;
 const int ci_Left_Line_Tracker_LED = 12;
 const int ci_ultrasonic_LED = 8; // pin LED for ultrasonic sensor
 
-const int ci_servo_scan = 10;
+const int ci_servo_turntable = 13;
+const int ci_servo_pivot = 12;
+const int ci_servo_arm = 11;
+const int ci_servo_magnet = 10;
 
 //constants
 
@@ -80,7 +91,11 @@ const int ci_Motor_Calibration_Time = 5000;
 //variables
 byte b_LowByte;
 byte b_HighByte;
-unsigned long ul_Echo_Time;
+unsigned long ul_Echo_Time_Front;
+unsigned long ul_Echo_Time_Right;
+unsigned long ul_Echo_Time_Left;
+
+
 unsigned int ui_Left_Line_Tracker_Data;
 unsigned int ui_Middle_Line_Tracker_Data;
 unsigned int ui_Right_Line_Tracker_Data;
@@ -132,24 +147,27 @@ boolean bt_Cal_Initialized = false;
 
 Servo servo_RightMotor;
 Servo servo_LeftMotor;
-Servo servo_scan;
+
+Servo servo_turntable, servo_pivot, servo_arm, servo_magnet;
 
 I2CEncoder encoder_RightMotor;
 I2CEncoder encoder_LeftMotor;
 
-/*************************SETUP**********************************/
+/*****************************************************************SETUP************************************************************/
 void setup() {
   Wire.begin();
   Serial.begin(9600);
-  pinMode(ci_Ultrasonic_Ping, OUTPUT);
-  pinMode(ci_Ultrasonic_Data, INPUT);
+
+  //setup ultrasonic
+  pinMode(ci_Ultrasonic_Ping_Front, OUTPUT);
+  pinMode(ci_Ultrasonic_Data_Front, INPUT);
+  pinMode(ci_Ultrasonic_Ping_Right, OUTPUT);
+  pinMode(ci_Ultrasonic_Data_Right, INPUT);
+  pinMode(ci_Ultrasonic_Ping_Left, OUTPUT);
+  pinMode(ci_Ultrasonic_Data_Left, INPUT);
 
   CharliePlexM::setBtn(ci_Charlieplex_LED1, ci_Charlieplex_LED2,
                        ci_Charlieplex_LED3, ci_Charlieplex_LED4, ci_Mode_Button);
-
-  // set up ultrasonic
-  pinMode(ci_Ultrasonic_Ping, OUTPUT);
-  pinMode(ci_Ultrasonic_Data, INPUT);
 
   // set up drive motors
   pinMode(ci_Right_Motor, OUTPUT);
@@ -200,38 +218,23 @@ void setup() {
   b_HighByte = EEPROM.read(ci_Right_Motor_Offset_Address_H);
   ui_Right_Motor_Offset = word(b_HighByte, b_LowByte);
 
-  servo_scan.attach(ci_servo_scan);
+  //attach servo motors being used
+  servo_turntable.attach(ci_servo_turntable);
+  servo_pivot.attach(ci_servo_pivot);
+  servo_arm.attach(ci_servo_arm);
+  servo_magnet.attach(ci_servo_magnet);
 
 }
-/*************************END SETUP**********************************/
+/*********************************************************************END SETUP**************************************************************/
 
-void Ping()
-{
-  //Ping Ultrasonic
-  //Send the Ultrasonic Range Finder a 10 microsecond pulse per tech spec
-  digitalWrite(ci_Ultrasonic_Ping, HIGH);
-  delayMicroseconds(10);  //The 10 microsecond pause where the pulse in "high"
-  digitalWrite(ci_Ultrasonic_Ping, LOW);
-  //use command pulseIn to listen to Ultrasonic_Data pin to record the
-  //time that it takes from when the Pin goes HIGH until it goes LOW
-  ul_Echo_Time = pulseIn(ci_Ultrasonic_Data, HIGH, 10000);
-
-#ifdef DEBUG_ULTRASONIC
-  // Print Sensor Readings
-  Serial.print("Time (microseconds): ");
-  Serial.print(ul_Echo_Time, DEC);
-  Serial.print(", cm: ");
-  Serial.println(ul_Echo_Time / 24); //divide time by 58 to get distance in cm
-#endif
-  //indicate LED on Charlieplex when reached below 20 cm
-  if ((ul_Echo_Time / 24) < 20) {
-    CharliePlexM::Write(12, HIGH);
-  }
-  else {
-    CharliePlexM::Write(12, LOW);
-  }
-
-}
+int previous = 0;
+int current = 0;
+bool drive = true;
+int bot_speed = 1300;
+int bot_stop = 1500;
+bool start_turn = false;
+int num_turns = 0;
+int tesseract_count = 0;
 
 void readLineTrackers()
 {
@@ -295,51 +298,166 @@ void scan() {//rotates arm to scan for good tesseracks
   if (clockwise == false) {
     for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
       // in steps of 1 degree
-      servo_scan.write(pos);              // tell servo to go to position in variable 'pos'
+      servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
       delay(15);                       // waits 15ms for the servo to reach the position
     }
     clockwise = true;
   }
   else {
     for (pos = 180; pos >= 0; pos -= 1) { // goes from 180 degrees to 0 degrees
-      servo_scan.write(pos);              // tell servo to go to position in variable 'pos'
+      servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
       delay(15);                       // waits 15ms for the servo to reach the position
     }
     clockwise = false;
   }
 }
 
+void Ping_Left()
+{
+  //Ping Ultrasonic
+  //Send the Ultrasonic Range Finder a 10 microsecond pulse per tech spec
+  digitalWrite(ci_Ultrasonic_Ping_Left, HIGH);
+  delayMicroseconds(10);  //The 10 microsecond pause where the pulse in "high"
+  digitalWrite(ci_Ultrasonic_Ping_Left, LOW);
+  //use command pulseIn to listen to Ultrasonic_Data pin to record the
+  //time that it takes from when the Pin goes HIGH until it goes LOW
+  ul_Echo_Time_Left = pulseIn(ci_Ultrasonic_Data_Left, HIGH, 10000);
 
-int previous = 0;
-int current = 0;
-bool drive = true;
+#ifdef DEBUG_ULTRASONIC_LEFT
+  // Print Sensor Readings
+  Serial.print("Time (microseconds): ");
+  Serial.print(ul_Echo_Time_Left, DEC);
+  Serial.print(", cm: ");
+  Serial.println(ul_Echo_Time_Left / 24); //divide time by 58 to get distance in cm
+#endif
 
+}
 
-/*************************** MAIN LOOP **********************************/
-void loop() {
-  /*current = millis();
-    //Ping();
-    if (drive == true) {//drive forward
-    CharliePlexM::Write(3, HIGH);
-    //servo_LeftMotor.writeMicroseconds(1350);
-    //servo_RightMotor.writeMicroseconds(1350);
+void Ping_Right()
+{
+  //Ping Ultrasonic
+  //Send the Ultrasonic Range Finder a 10 microsecond pulse per tech spec
+  digitalWrite(ci_Ultrasonic_Ping_Right, HIGH);
+  delayMicroseconds(10);  //The 10 microsecond pause where the pulse in "high"
+  digitalWrite(ci_Ultrasonic_Ping_Right, LOW);
+  //use command pulseIn to listen to Ultrasonic_Data pin to record the
+  //time that it takes from when the Pin goes HIGH until it goes LOW
+  ul_Echo_Time_Right = pulseIn(ci_Ultrasonic_Data_Right, HIGH, 10000);
 
-    if ((current - previous) > 2000) { //stop after one second
-      //servo_LeftMotor.writeMicroseconds(1500);
-      //servo_RightMotor.writeMicroseconds(1500);
-      drive = false;
+#ifdef DEBUG_ULTRASONIC_RIGHT
+  // Print Sensor Readings
+  Serial.print("Time (microseconds): ");
+  Serial.print(ul_Echo_Time_Right, DEC);
+  Serial.print(", cm: ");
+  Serial.println(ul_Echo_Time_Right / 24); //divide time by 58 to get distance in cm
+#endif
+
+}
+
+void Ping_Front()
+{
+  //Ping Ultrasonic
+  //Send the Ultrasonic Range Finder a 10 microsecond pulse per tech spec
+  digitalWrite(ci_Ultrasonic_Ping_Front, HIGH);
+  delayMicroseconds(10);  //The 10 microsecond pause where the pulse in "high"
+  digitalWrite(ci_Ultrasonic_Ping_Front, LOW);
+  //use command pulseIn to listen to Ultrasonic_Data pin to record the
+  //time that it takes from when the Pin goes HIGH until it goes LOW
+  ul_Echo_Time_Front = pulseIn(ci_Ultrasonic_Data_Front, HIGH, 10000);
+
+#ifdef DEBUG_ULTRASONIC_FRONT
+  // Print Sensor Readings
+  Serial.print("Time (microseconds): ");
+  Serial.print(ul_Echo_Time_Front, DEC);
+  Serial.print(", cm: ");
+  Serial.println(ul_Echo_Time_Front / 24); //divide time by 58 to get distance in cm
+#endif
+  //indicate LED on Charlieplex when reached below 20 cm
+  if ((ul_Echo_Time_Front / 24) < 20) {
+    CharliePlexM::Write(12, HIGH);
+  }
+  else {
+    CharliePlexM::Write(12, LOW);
+  }
+
+}
+
+void travel() {//makes robot travel straight, main movement function of robot
+
+  if (num_turns % 2 == 0) {//use LEFT ultrasonic to detect wall and travel in a straight path
+    if ((ul_Echo_Time_Left / 24) >= 20.5) {//if moving AWAY FROM wall turn left
+      servo_LeftMotor.writeMicroseconds(bot_speed + 10); //left motor moves slower
+      servo_RightMotor.writeMicroseconds(bot_speed);
     }
+    else if ((ul_Echo_Time_Left / 24) <= 19.5) { //if moving TOWARD wall, turn right
+      servo_LeftMotor.writeMicroseconds(bot_speed);
+      servo_RightMotor.writeMicroseconds(bot_speed + 10); //right motor moves slower
     }
+    else {//when in correct position do not adjust speed
+      servo_LeftMotor.writeMicroseconds(bot_speed);
+      servo_RightMotor.writeMicroseconds(bot_speed);
+    }
+  }
 
-    else if (drive == false) {
-    CharliePlexM::Write(3, LOW);
-    scan();
-    drive = true;//after finished scanning continue driving
-    current = millis();
-    previous = current;
+  else { //use RIGHT ultrasonic to detect wall and travel in a straight path
+    if ((ul_Echo_Time_Left / 24) >= 20.5) {//if moving TOWARD wall, turn right
+      servo_LeftMotor.writeMicroseconds(bot_speed);
+      servo_RightMotor.writeMicroseconds(bot_speed + 10); //right motor moves slower
+    }
+    else if ((ul_Echo_Time_Left / 24) <= 19.5) {//if moving AWAY FROM wall, turn left
+      servo_LeftMotor.writeMicroseconds(bot_speed + 10); //left motor moves slower
+      servo_RightMotor.writeMicroseconds(bot_speed);
+    }
+    else {//when in correct position do not adjust speed
+      servo_LeftMotor.writeMicroseconds(bot_speed);
+      servo_RightMotor.writeMicroseconds(bot_speed);
+    }
+  }
+
+  if ((current - previous) > 1000) { //stop after one second of movement
+    servo_LeftMotor.writeMicroseconds(1500);
+    servo_RightMotor.writeMicroseconds(1500);
+    drive = false;
+  }
+
+}
+
+void turn() {//turns on either end when it reaches the end wall
+
+  if (num_turns % 2 == 0) {
+    servo_LeftMotor.writeMicroseconds(bot_speed);
+    servo_RightMotor.writeMicroseconds(bot_stop);
+    num_turns++;
+  }
+
+  else { //use RIGHT ultrasonic to detect wall and travel in a straight path
+    servo_LeftMotor.writeMicroseconds(bot_stop);
+    servo_RightMotor.writeMicroseconds(bot_speed);
+    num_turns++;
+  }
+  /*if ((encoder_LeftMotor.getRawPosition() >=100)||(encoder_RightMotor.getRawPosition() >=100)) { //when full turn is complete
+    start_turn = false;
     }*/
 
-  //////////////////////////////////////////////////////////////
+  if ((current - previous) > 1000) { //stop after one second of movement
+    servo_LeftMotor.writeMicroseconds(1500);
+    servo_RightMotor.writeMicroseconds(1500);
+    drive = false;
+  }
+
+}
+
+void GoHome() { //after tesserack is collected, goes home to place tesseract and then returns to previous position
+
+
+
+}
+
+
+
+
+/************************************************************* MAIN LOOP *****************************************************************/
+void loop() {
   if ((millis() - ul_3_Second_timer) > 3000)
   {
     bt_3_S_Time_Up = true;
@@ -378,7 +496,7 @@ void loop() {
     case 0:    //Robot stopped
       {
         readLineTrackers();
-        Ping();
+        Ping_Front();
         servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
         servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
         encoder_LeftMotor.zero();
@@ -407,39 +525,33 @@ void loop() {
           ui_Left_Motor_Speed = constrain(ui_Motors_Speed + ui_Left_Motor_Offset, 1600, 2100);
           ui_Right_Motor_Speed = constrain(ui_Motors_Speed + ui_Right_Motor_Offset, 1600, 2100);
 
-          /***************************************************************************************
-            Add code here.
+          /*****************************************************************************************************************************************
+            Main operation code HERE
             Implementation of mode 1 operations of MSE 2202 Project
 
-            /*************************************************************************************/
+            /**************************************************************************************************************************************/
 
           current = millis();
-          Ping();
-          
-          servo_LeftMotor.writeMicroseconds(1500);
-          servo_RightMotor.writeMicroseconds(1500);
-          
+          Ping_Front();
+          Ping_Right();
+          Ping_Left();
+          servo_LeftMotor.writeMicroseconds(bot_speed);
+          servo_RightMotor.writeMicroseconds(bot_speed);
           if (drive == true) {//drive forward
             CharliePlexM::Write(3, HIGH);
-            if ((ul_Echo_Time / 24) >= 20.5) {//if moving away from wall turn right
-              servo_LeftMotor.writeMicroseconds(1300);
-              servo_RightMotor.writeMicroseconds(1295);//right moter seems to be pushing bot to the left
+
+            if ((ul_Echo_Time_Front / 24) <= 10) {
+              start_turn = true;
             }
-            else if ((ul_Echo_Time / 24) <= 19.5) { //if moving towards wall, turn left
-              servo_LeftMotor.writeMicroseconds(1260);
-              servo_RightMotor.writeMicroseconds(1300);
+            if (start_turn == true) {
+              turn();
             }
             else {
-              servo_LeftMotor.writeMicroseconds(1300);
-              servo_RightMotor.writeMicroseconds(1300);
+              travel();
             }
+            //insert if statement for when tessarct is picked up to initiate going home
+            //insert if statement in case front line trackers detect that we have reached the neutral zone
 
-            if ((current - previous) > 1000) { //stop after one second
-              servo_LeftMotor.writeMicroseconds(1500);
-              servo_RightMotor.writeMicroseconds(1500);
-              drive = false;
-            }
-            
           }
 
           else if (drive == false) {
@@ -453,7 +565,7 @@ void loop() {
 
 
 
-          
+
 
 #ifdef DEBUG_MOTORS
           Serial.print("Motors enabled: ");
@@ -639,6 +751,6 @@ void loop() {
 }
 
 
-/******************************** END MAIN LOOP ******************************/
+/******************************************************************* END MAIN LOOP ******************************************************/
 
 
