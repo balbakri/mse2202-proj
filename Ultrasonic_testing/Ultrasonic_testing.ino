@@ -1,5 +1,5 @@
-const int ci_Ultrasonic_Ping = 2;   //input plug
-const int ci_Ultrasonic_Data = 3;   //output plug
+const int ci_Ultrasonic_Ping = 5;   //input plug
+const int ci_Ultrasonic_Data = 4;   //output plug
 unsigned long ul_Echo_Time;
 
 void setup() {
