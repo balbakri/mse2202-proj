@@ -234,11 +234,14 @@ int current_ping = 0;
 bool drive = true;
 int bot_speed = 1300;
 int bot_stop = 1500;
-bool start_turn = false;
+bool start_turn = false;//used to indicate when turn has started or not
+bool end_turn = true;//used to indicate when turn has ended or not
 int num_turns = 0;
 int tesseract_count = 0;
 int left_wheel = 0;//used to calculated wheel rotation while turning
 int right_wheel = 0;//used to calculated wheel rotation while turning
+int left_wheel_prev = 0;
+int right_wheel_prev = 0;
 
 //use these variables for navigation (mapping the area)
 int x = 0;
@@ -395,11 +398,11 @@ void Ping_Front()
 void travel() {//makes robot travel straight, main movement function of robot
 
   if (num_turns % 2 == 0) {//use LEFT ultrasonic to detect wall and travel in a straight path
-    if ((ul_Echo_Time_Left / 24) >= (10.5 + (10 * num_turns))) { //if moving AWAY FROM wall turn left
+    if ((ul_Echo_Time_Left / 24) >= (10.5 + (25 * num_turns))) { //if moving AWAY FROM wall turn left
       servo_LeftMotor.writeMicroseconds(bot_speed + 10); //left motor moves slower
       servo_RightMotor.writeMicroseconds(bot_speed);
     }
-    else if ((ul_Echo_Time_Left / 24) <= (9.5 + (10 * num_turns))) { //if moving TOWARD wall, turn right
+    else if ((ul_Echo_Time_Left / 24) <= (9.5 + (25 * num_turns))) { //if moving TOWARD wall, turn right
       servo_LeftMotor.writeMicroseconds(bot_speed);
       servo_RightMotor.writeMicroseconds(bot_speed + 1); //right motor moves slower. This is small because robot leans to the right
     }
@@ -410,11 +413,11 @@ void travel() {//makes robot travel straight, main movement function of robot
   }
 
   else { //use RIGHT ultrasonic to detect wall and travel in a straight path
-    if ((ul_Echo_Time_Right / 24) >= (10.5 + (10 * num_turns))) { //if moving TOWARD wall, turn right
+    if ((ul_Echo_Time_Right / 24) >= (10.5 + (25 * num_turns))) { //if moving TOWARD wall, turn right
       servo_LeftMotor.writeMicroseconds(bot_speed);
       servo_RightMotor.writeMicroseconds(bot_speed + 10); //right motor moves slower
     }
-    else if ((ul_Echo_Time_Right / 24) <= (9.5 + (10 * num_turns))) { //if moving AWAY FROM wall, turn left
+    else if ((ul_Echo_Time_Right / 24) <= (9.5 + (25 * num_turns))) { //if moving AWAY FROM wall, turn left
       servo_LeftMotor.writeMicroseconds(bot_speed + 10); //left motor moves slower
       servo_RightMotor.writeMicroseconds(bot_speed);
     }
@@ -435,25 +438,25 @@ void travel() {//makes robot travel straight, main movement function of robot
 }
 
 void turn() {//turns on either end when it reaches the end wall
-  left_wheel += encoder_LeftMotor.getRawPosition();
-  right_wheel += encoder_RightMotor.getRawPosition();
+  Serial.println(left_wheel);
+  left_wheel = encoder_LeftMotor.getRawPosition();
+  right_wheel = encoder_RightMotor.getRawPosition();
 
   if (num_turns % 2 == 0) {
     servo_LeftMotor.writeMicroseconds(bot_speed);
     servo_RightMotor.writeMicroseconds(bot_stop);
-    //num_turns++;
   }
-
   else {
     servo_LeftMotor.writeMicroseconds(bot_stop);
     servo_RightMotor.writeMicroseconds(bot_speed);
-    //num_turns++;
   }
-  if ((abs(left_wheel) >= 93) || (abs(right_wheel) >= 93)) { //when full turn is complete
+
+  if ((abs(left_wheel-left_wheel_prev) >= 1800)||(abs(right_wheel-right_wheel_prev) >= 1800)) { //when full turn is complete // should be 93(abs(right_wheel) >= 93)
     start_turn = false;
+    end_turn = true;
     num_turns++;
-    left_wheel = 0;
-    right_wheel = 0;
+    //encoder_LeftMotor.zero();
+    //encoder_RightMotor.zero();
     //x++;
   }
 
@@ -476,7 +479,7 @@ void GoHome() { //after tesserack is collected, goes home to place tesseract and
 
 /************************************************************* MAIN LOOP *****************************************************************/
 void loop() {
-  //Ping_Right();
+  //Ping_Front();
   //left_wheel += encoder_LeftMotor.getRawPosition();
   //right_wheel += encoder_RightMotor.getRawPosition();
   /*Serial.print("Encoders L: ");
@@ -560,19 +563,22 @@ void loop() {
 
           current = millis();
           current_ping = millis();
+          
           if ((current_ping - previous_ping) > 500) {
             Ping_Front();
             Ping_Right();
             Ping_Left();
             previous_ping = current_ping;
           }
-          //travel();
 
           if (drive == true) {//drive forward
             //CharliePlexM::Write(3, HIGH);
 
-            if ((ul_Echo_Time_Front / 24) <= 10) {
+            if (((ul_Echo_Time_Front / 24) <= 35) && (end_turn == true)) {
               start_turn = true;
+              left_wheel_prev = encoder_LeftMotor.getRawPosition();
+              right_wheel_prev = encoder_RightMotor.getRawPosition();
+              end_turn = false;
             }
             if (start_turn == true) {
               turn();
