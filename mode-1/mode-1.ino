@@ -21,21 +21,21 @@
 boolean bt_Motors_Enabled = true;
 
 //port pin constants
-const int ci_Ultrasonic_Data_Front = 2;   //output plug
-const int ci_Ultrasonic_Ping_Front = 3;   //input plug
+const int ci_Ultrasonic_Data_Front = 2;   //input plug
+const int ci_Ultrasonic_Ping_Front = 3;   //output plug
 //right side ultrasonic
-const int ci_Ultrasonic_Data_Right = 4;   //output plug
-const int ci_Ultrasonic_Ping_Right = 5;   //input plug
+const int ci_Ultrasonic_Data_Right = 4;   //input plug
+const int ci_Ultrasonic_Ping_Right = 5;   //output plug
 //left side ultrasonic
-const int ci_Ultrasonic_Data_Left = 6;   //output plug
-const int ci_Ultrasonic_Ping_Left = 7;   //input plug
+const int ci_Ultrasonic_Data_Left = 6;   //input plug
+const int ci_Ultrasonic_Ping_Left = 7;   //output plug
 
-const int ci_Charlieplex_LED1 = 4;
-const int ci_Charlieplex_LED2 = 5;
-const int ci_Charlieplex_LED3 = 6;
-const int ci_Charlieplex_LED4 = 7;
+const int ci_Charlieplex_LED1 = 1;//4
+const int ci_Charlieplex_LED2 = 1;//5
+const int ci_Charlieplex_LED3 = 1;//6
+const int ci_Charlieplex_LED4 = 1;//7
 
-const int ci_Mode_Button = 7;
+const int ci_Mode_Button = 0;
 const int ci_Right_Motor = 8;
 const int ci_Left_Motor = 9;
 const int ci_Motor_Enable_Switch = 12;
@@ -47,12 +47,12 @@ const int ci_I2C_SCL = A5;         // I2C clock = yellow
 
 
 // Charlieplexing LED assignments
-const int ci_Heartbeat_LED = 1;
-const int ci_Indicator_LED = 4;
-const int ci_Right_Line_Tracker_LED = 6;
-const int ci_Middle_Line_Tracker_LED = 9;
-const int ci_Left_Line_Tracker_LED = 12;
-const int ci_ultrasonic_LED = 8; // pin LED for ultrasonic sensor
+/*const int ci_Heartbeat_LED = 1;
+  const int ci_Indicator_LED = 4;
+  const int ci_Right_Line_Tracker_LED = 6;
+  const int ci_Middle_Line_Tracker_LED = 9;
+  const int ci_Left_Line_Tracker_LED = 12;
+  const int ci_ultrasonic_LED = 8; // pin LED for ultrasonic sensor*/
 
 const int ci_servo_turntable = 13;
 const int ci_servo_pivot = 12;
@@ -94,7 +94,6 @@ byte b_HighByte;
 unsigned long ul_Echo_Time_Front;
 unsigned long ul_Echo_Time_Right;
 unsigned long ul_Echo_Time_Left;
-
 
 unsigned int ui_Left_Line_Tracker_Data;
 unsigned int ui_Middle_Line_Tracker_Data;
@@ -224,17 +223,26 @@ void setup() {
   servo_arm.attach(ci_servo_arm);
   servo_magnet.attach(ci_servo_magnet);
 
+
 }
 /*********************************************************************END SETUP**************************************************************/
 
 int previous = 0;
 int current = 0;
+int previous_ping = 0;
+int current_ping = 0;
 bool drive = true;
 int bot_speed = 1300;
 int bot_stop = 1500;
 bool start_turn = false;
 int num_turns = 0;
 int tesseract_count = 0;
+int left_wheel = 0;//used to calculated wheel rotation while turning
+int right_wheel = 0;//used to calculated wheel rotation while turning
+
+//use these variables for navigation (mapping the area)
+int x = 0;
+int y = 0;
 
 void readLineTrackers()
 {
@@ -242,30 +250,30 @@ void readLineTrackers()
   ui_Middle_Line_Tracker_Data = analogRead(ci_Middle_Line_Tracker);
   ui_Right_Line_Tracker_Data = analogRead(ci_Right_Line_Tracker);
 
-  if (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
-  {
-    CharliePlexM::Write(ci_Left_Line_Tracker_LED, HIGH);
-  }
-  else
-  {
+  /*if (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+    {
+    CharliePlexM::Write(ci_Left_Line_Tracker_LED, HIGH);s
+    }
+    else
+    {
     CharliePlexM::Write(ci_Left_Line_Tracker_LED, LOW);
-  }
-  if (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
-  {
+    }
+    if (ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+    {
     CharliePlexM::Write(ci_Middle_Line_Tracker_LED, HIGH);
-  }
-  else
-  {
+    }
+    else
+    {
     CharliePlexM::Write(ci_Middle_Line_Tracker_LED, LOW);
-  }
-  if (ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
-  {
+    }
+    if (ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+    {
     CharliePlexM::Write(ci_Right_Line_Tracker_LED, HIGH);
-  }
-  else
-  {
+    }
+    else
+    {
     CharliePlexM::Write(ci_Right_Line_Tracker_LED, LOW);
-  }
+    }*/
 
 #ifdef DEBUG_LINE_TRACKERS
   Serial.print("Trackers: Left = ");
@@ -279,8 +287,8 @@ void readLineTrackers()
 }
 
 // set mode indicator LED state
-void Indicator()
-{
+/*void Indicator()
+  {
   //display routine, if true turn on led
   CharliePlexM::Write(ci_Indicator_LED, !(ui_Mode_Indicator[ui_Mode_Indicator_Index] &
                                           (iArray[iArrayIndex])));
@@ -289,7 +297,7 @@ void Indicator()
 
   // read values from line trackers and update status of line tracker LEDs
 
-}
+  }*/
 
 bool clockwise = true;
 int pos = 0;
@@ -323,6 +331,7 @@ void Ping_Left()
   //time that it takes from when the Pin goes HIGH until it goes LOW
   ul_Echo_Time_Left = pulseIn(ci_Ultrasonic_Data_Left, HIGH, 10000);
 
+
 #ifdef DEBUG_ULTRASONIC_LEFT
   // Print Sensor Readings
   Serial.print("Time (microseconds): ");
@@ -343,6 +352,7 @@ void Ping_Right()
   //use command pulseIn to listen to Ultrasonic_Data pin to record the
   //time that it takes from when the Pin goes HIGH until it goes LOW
   ul_Echo_Time_Right = pulseIn(ci_Ultrasonic_Data_Right, HIGH, 10000);
+
 
 #ifdef DEBUG_ULTRASONIC_RIGHT
   // Print Sensor Readings
@@ -373,25 +383,25 @@ void Ping_Front()
   Serial.println(ul_Echo_Time_Front / 24); //divide time by 58 to get distance in cm
 #endif
   //indicate LED on Charlieplex when reached below 20 cm
-  if ((ul_Echo_Time_Front / 24) < 20) {
+  /*if ((ul_Echo_Time_Front / 24) < 20) {
     CharliePlexM::Write(12, HIGH);
-  }
-  else {
+    }
+    else {
     CharliePlexM::Write(12, LOW);
-  }
+    }*/
 
 }
 
 void travel() {//makes robot travel straight, main movement function of robot
 
   if (num_turns % 2 == 0) {//use LEFT ultrasonic to detect wall and travel in a straight path
-    if ((ul_Echo_Time_Left / 24) >= 20.5) {//if moving AWAY FROM wall turn left
+    if ((ul_Echo_Time_Left / 24) >= (10.5 + (10 * num_turns))) { //if moving AWAY FROM wall turn left
       servo_LeftMotor.writeMicroseconds(bot_speed + 10); //left motor moves slower
       servo_RightMotor.writeMicroseconds(bot_speed);
     }
-    else if ((ul_Echo_Time_Left / 24) <= 19.5) { //if moving TOWARD wall, turn right
+    else if ((ul_Echo_Time_Left / 24) <= (9.5 + (10 * num_turns))) { //if moving TOWARD wall, turn right
       servo_LeftMotor.writeMicroseconds(bot_speed);
-      servo_RightMotor.writeMicroseconds(bot_speed + 10); //right motor moves slower
+      servo_RightMotor.writeMicroseconds(bot_speed + 1); //right motor moves slower. This is small because robot leans to the right
     }
     else {//when in correct position do not adjust speed
       servo_LeftMotor.writeMicroseconds(bot_speed);
@@ -400,11 +410,11 @@ void travel() {//makes robot travel straight, main movement function of robot
   }
 
   else { //use RIGHT ultrasonic to detect wall and travel in a straight path
-    if ((ul_Echo_Time_Left / 24) >= 20.5) {//if moving TOWARD wall, turn right
+    if ((ul_Echo_Time_Right / 24) >= (10.5 + (10 * num_turns))) { //if moving TOWARD wall, turn right
       servo_LeftMotor.writeMicroseconds(bot_speed);
       servo_RightMotor.writeMicroseconds(bot_speed + 10); //right motor moves slower
     }
-    else if ((ul_Echo_Time_Left / 24) <= 19.5) {//if moving AWAY FROM wall, turn left
+    else if ((ul_Echo_Time_Right / 24) <= (9.5 + (10 * num_turns))) { //if moving AWAY FROM wall, turn left
       servo_LeftMotor.writeMicroseconds(bot_speed + 10); //left motor moves slower
       servo_RightMotor.writeMicroseconds(bot_speed);
     }
@@ -414,50 +424,67 @@ void travel() {//makes robot travel straight, main movement function of robot
     }
   }
 
-  if ((current - previous) > 1000) { //stop after one second of movement
+  /*if ((current - previous) > 1000) { //stop after one second of movement
     servo_LeftMotor.writeMicroseconds(1500);
     servo_RightMotor.writeMicroseconds(1500);
+    current = millis();
+    previous = current;
     drive = false;
-  }
+    }*/
 
 }
 
 void turn() {//turns on either end when it reaches the end wall
+  left_wheel += encoder_LeftMotor.getRawPosition();
+  right_wheel += encoder_RightMotor.getRawPosition();
 
   if (num_turns % 2 == 0) {
     servo_LeftMotor.writeMicroseconds(bot_speed);
     servo_RightMotor.writeMicroseconds(bot_stop);
-    num_turns++;
+    //num_turns++;
   }
 
-  else { //use RIGHT ultrasonic to detect wall and travel in a straight path
+  else {
     servo_LeftMotor.writeMicroseconds(bot_stop);
     servo_RightMotor.writeMicroseconds(bot_speed);
-    num_turns++;
+    //num_turns++;
   }
-  /*if ((encoder_LeftMotor.getRawPosition() >=100)||(encoder_RightMotor.getRawPosition() >=100)) { //when full turn is complete
+  if ((abs(left_wheel) >= 93) || (abs(right_wheel) >= 93)) { //when full turn is complete
     start_turn = false;
-    }*/
+    num_turns++;
+    left_wheel = 0;
+    right_wheel = 0;
+    //x++;
+  }
 
-  if ((current - previous) > 1000) { //stop after one second of movement
+  /*if ((current - previous) > 1000) { //stop after one second of movement
     servo_LeftMotor.writeMicroseconds(1500);
     servo_RightMotor.writeMicroseconds(1500);
+    current = millis();
+    previous = current;
     drive = false;
-  }
+    }*/
 
 }
 
 void GoHome() { //after tesserack is collected, goes home to place tesseract and then returns to previous position
 
+  //do two 90 degree turns to go home.
 
 
 }
 
-
-
-
 /************************************************************* MAIN LOOP *****************************************************************/
 void loop() {
+  //Ping_Right();
+  //left_wheel += encoder_LeftMotor.getRawPosition();
+  //right_wheel += encoder_RightMotor.getRawPosition();
+  /*Serial.print("Encoders L: ");
+    Serial.print(left_wheel);
+    Serial.print(", R: ");
+    Serial.println(right_wheel);*/
+
+
   if ((millis() - ul_3_Second_timer) > 3000)
   {
     bt_3_S_Time_Up = true;
@@ -532,13 +559,17 @@ void loop() {
             /**************************************************************************************************************************************/
 
           current = millis();
-          Ping_Front();
-          Ping_Right();
-          Ping_Left();
-          servo_LeftMotor.writeMicroseconds(bot_speed);
-          servo_RightMotor.writeMicroseconds(bot_speed);
+          current_ping = millis();
+          if ((current_ping - previous_ping) > 500) {
+            Ping_Front();
+            Ping_Right();
+            Ping_Left();
+            previous_ping = current_ping;
+          }
+          //travel();
+
           if (drive == true) {//drive forward
-            CharliePlexM::Write(3, HIGH);
+            //CharliePlexM::Write(3, HIGH);
 
             if ((ul_Echo_Time_Front / 24) <= 10) {
               start_turn = true;
@@ -546,17 +577,18 @@ void loop() {
             if (start_turn == true) {
               turn();
             }
+            //insert if statement for when tessarct is picked up to initiate going home
+            //insert if statement in case front line trackers detect that we have reached the neutral zone
             else {
               travel();
             }
-            //insert if statement for when tessarct is picked up to initiate going home
-            //insert if statement in case front line trackers detect that we have reached the neutral zone
 
           }
 
           else if (drive == false) {
-            CharliePlexM::Write(3, LOW);
+            //CharliePlexM::Write(3, LOW);
             scan();
+            y++;
             drive = true;//after finished scanning continue driving
             current = millis();
             previous = current;
@@ -582,7 +614,7 @@ void loop() {
         break;
       }
 
-    case 2:    //Calibrate line tracker light levels after 3 seconds
+    /*case 2:    //Calibrate line tracker light levels after 3 seconds
       {
         if (bt_3_S_Time_Up)
         {
@@ -609,14 +641,14 @@ void loop() {
             ui_Left_Line_Tracker_Light /= ci_Line_Tracker_Cal_Measures;
             ui_Middle_Line_Tracker_Light /= ci_Line_Tracker_Cal_Measures;
             ui_Right_Line_Tracker_Light /= ci_Line_Tracker_Cal_Measures;
-#ifdef DEBUG_LINE_TRACKER_CALIBRATION
+      #ifdef DEBUG_LINE_TRACKER_CALIBRATION
             Serial.print("Light Levels: Left = ");
             Serial.print(ui_Left_Line_Tracker_Light, DEC);
             Serial.print(", Middle = ");
             Serial.print(ui_Middle_Line_Tracker_Light, DEC);
             Serial.print(", Right = ");
             Serial.println(ui_Right_Line_Tracker_Light, DEC);
-#endif
+      #endif
             EEPROM.write(ci_Left_Line_Tracker_Light_Address_L, lowByte(ui_Left_Line_Tracker_Light));
             EEPROM.write(ci_Left_Line_Tracker_Light_Address_H, highByte(ui_Left_Line_Tracker_Light));
             EEPROM.write(ci_Middle_Line_Tracker_Light_Address_L, lowByte(ui_Middle_Line_Tracker_Light));
@@ -630,7 +662,7 @@ void loop() {
         break;
       }
 
-    case 3:    // Calibrate line tracker dark levels after 3 seconds
+      case 3:    // Calibrate line tracker dark levels after 3 seconds
       {
         if (bt_3_S_Time_Up)
         {
@@ -657,14 +689,14 @@ void loop() {
             ui_Left_Line_Tracker_Dark /= ci_Line_Tracker_Cal_Measures;
             ui_Middle_Line_Tracker_Dark /= ci_Line_Tracker_Cal_Measures;
             ui_Right_Line_Tracker_Dark /= ci_Line_Tracker_Cal_Measures;
-#ifdef DEBUG_LINE_TRACKER_CALIBRATION
+      #ifdef DEBUG_LINE_TRACKER_CALIBRATION
             Serial.print("Dark Levels: Left = ");
             Serial.print(ui_Left_Line_Tracker_Dark, DEC);
             Serial.print(", Middle = ");
             Serial.print(ui_Middle_Line_Tracker_Dark, DEC);
             Serial.print(", Right = ");
             Serial.println(ui_Right_Line_Tracker_Dark, DEC);
-#endif
+      #endif
             EEPROM.write(ci_Left_Line_Tracker_Dark_Address_L, lowByte(ui_Left_Line_Tracker_Dark));
             EEPROM.write(ci_Left_Line_Tracker_Dark_Address_H, highByte(ui_Left_Line_Tracker_Dark));
             EEPROM.write(ci_Middle_Line_Tracker_Dark_Address_L, lowByte(ui_Middle_Line_Tracker_Dark));
@@ -676,7 +708,7 @@ void loop() {
           ui_Mode_Indicator_Index = 3;
         }
         break;
-      }
+      }*/
 
     case 4:    //Calibrate motor straightness after 3 seconds.
       {
@@ -743,10 +775,10 @@ void loop() {
     Serial.print("Mode: ");
     Serial.println(ui_Mode_Indicator[ui_Mode_Indicator_Index], DEC);
 #endif
-    bt_Heartbeat = !bt_Heartbeat;
-    CharliePlexM::Write(ci_Heartbeat_LED, bt_Heartbeat);
-    digitalWrite(13, bt_Heartbeat);
-    Indicator();
+    /*bt_Heartbeat = !bt_Heartbeat;
+      CharliePlexM::Write(ci_Heartbeat_LED, bt_Heartbeat);
+      digitalWrite(13, bt_Heartbeat);
+      Indicator();*/
   }
 }
 
