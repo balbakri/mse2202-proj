@@ -1,4 +1,3 @@
-//mode 1 code
 #include <Servo.h>
 #include <EEPROM.h>
 #include <uSTimer2.h>
@@ -44,6 +43,8 @@ const int ci_Middle_Line_Tracker = A1;
 const int ci_Left_Line_Tracker = A2;
 const int ci_I2C_SDA = A4;         // I2C data = white
 const int ci_I2C_SCL = A5;         // I2C clock = yellow
+
+/*****/
 
 
 // Charlieplexing LED assignments
@@ -138,7 +139,7 @@ int  iArray[16] = {
   1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 65536
 };
 int  iArrayIndex = 0;
-
+int mag_field =0;  //hall-effect sensor value
 boolean bt_Heartbeat = true;
 boolean bt_3_S_Time_Up = false;
 boolean bt_Do_Once = false;
@@ -226,7 +227,8 @@ void setup() {
 
 }
 /*********************************************************************END SETUP**************************************************************/
-
+int p=0;
+int q=0;
 int previous = 0;
 int current = 0;
 int previous_ping = 0;
@@ -245,11 +247,15 @@ int left_wheel = 0;//used to calculated wheel rotation while turning
 int right_wheel = 0;//used to calculated wheel rotation while turning
 int left_wheel_prev = 0;
 int right_wheel_prev = 0;
-
 //use these variables for navigation (mapping the area)
 int x = 0;
 int y = 0;
-
+int mode2counter=0;
+int timer =1;
+bool timer1=false;
+bool timer2=false;
+bool lo=false;
+bool timer3=false;bool timer4=false;bool timer5=false;bool timer6=false;bool timer7=false;
 void readLineTrackers()
 {
   ui_Left_Line_Tracker_Data = analogRead(ci_Left_Line_Tracker);
@@ -300,9 +306,7 @@ void readLineTrackers()
                                           (iArray[iArrayIndex])));
   iArrayIndex++;
   iArrayIndex = iArrayIndex & 15;
-
   // read values from line trackers and update status of line tracker LEDs
-
   }*/
 
 bool clockwise = true;
@@ -515,13 +519,44 @@ void GoHome() { //after tesserack is collected, goes home to place tesseract and
     }*/
 
 }
+void Mode2Scan()
+{
+  
+    for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
+      // in steps of 1 degree
+      servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(15);                       // waits 15ms for the servo to reach the position
+     mag_field = analogRead(A0);
+  if (mag_field< 999)                  /*hall-effect sensor sensing value*/
+      {break;}
+      
+  }
+}
+void goback(int a)
+{
+while(current-previous>a*1000)
+{
+      servo_RightMotor.writeMicroseconds(1350);
+      servo_LeftMotor.writeMicroseconds(1350);
+}
+}
+
+
+
 
 /************************************************************* MAIN LOOP *****************************************************************/
 void loop() {
   //servo_arm.write(180);
   //servo_pivot.write(70);
+  
+  //left_wheel += encoder_LeftMotor.getRawPosition();
+  //right_wheel += encoder_RightMotor.getRawPosition();
+  /*Serial.print("Encoders L: ");
+    Serial.print(left_wheel);
+    Serial.print(", R: ");
+    Serial.println(right_wheel);*/
 
-
+//testing code^^^^^^
 
   if ((millis() - ul_3_Second_timer) > 3000)
   {
@@ -593,55 +628,64 @@ void loop() {
           /*****************************************************************************************************************************************
             Main operation code HERE
             Implementation of mode 1 operations of MSE 2202 Project
-
             /**************************************************************************************************************************************/
-          current_scan = millis();
-          if ((current_scan - previous_scan) > 15) {
-            scan();
-            previous_scan = current_scan;
+ 
+ 
+  if (ui_Left_Line_Tracker_Data>950)
+  {
+    p=100;
+  }
+  if (ui_Middle_Line_Tracker_Data>950)
+ 
+  {
+    q=100;
+  }
+ 
+  if ((p==100)&&(q==100))
+   {
+      servo_RightMotor.writeMicroseconds(bot_stop);
+      servo_LeftMotor.writeMicroseconds(bot_stop);
+    }
+            
+  else {  
+         current = millis();
+          current_ping = millis();
+          
+          if ((current_ping - previous_ping) > 500) {
+            Ping_Front();
+            Ping_Right();
+            Ping_Left();
+            previous_ping = current_ping;
           }
-          /*
-                    current = millis();
-                    current_ping = millis();
 
-                    if ((current_ping - previous_ping) > 500) {
-                      Ping_Front();
-                      Ping_Right();
-                      Ping_Left();
-                      previous_ping = current_ping;
-                    }
+          if (drive == true) {//drive forward
+            //CharliePlexM::Write(3, HIGH);
 
-                    if (drive == true) {//drive forward
-                      //CharliePlexM::Write(3, HIGH);
+            if (((ul_Echo_Time_Front / 24) <= 35) && (end_turn == true)) {
+              start_turn = true;
+              left_wheel_prev = encoder_LeftMotor.getRawPosition();
+              right_wheel_prev = encoder_RightMotor.getRawPosition();
+              end_turn = false;
+            }
+            if (start_turn == true) {
+              turn();
+            }
+            //insert if statement for when tessarct is picked up to initiate going home
+            //insert if statement in case front line trackers detect that we have reached the neutral zone
+            else {
+              travel();
+            }
 
-                      if (((ul_Echo_Time_Front / 24) <= 35) && (end_turn == true)) {
-                        start_turn = true;
-                        left_wheel_prev = encoder_LeftMotor.getRawPosition();
-                        right_wheel_prev = encoder_RightMotor.getRawPosition();
-                        end_turn = false;
-                      }
-                      if (start_turn == true) {
-                        turn();
-                      }
-                      //insert if statement for when tessarct is picked up to initiate going home
-                      //insert if statement in case front line trackers detect that we have reached the neutral zone
-                      else {
-                        travel();
-                      }
+          }
 
-                    }
-
-                    else if (drive == false) {
-                      //CharliePlexM::Write(3, LOW);
+          else if (drive == false) {
+            //CharliePlexM::Write(3, LOW);
                       scan();
                       y++;
                       drive = true;//after finished scanning continue driving
                       current = millis();
                       previous = current;
-                    }
-          */
-
-
+          }
 
 #ifdef DEBUG_MOTORS
           Serial.print("Motors enabled: ");
@@ -657,55 +701,115 @@ void loop() {
         }
         break;
       }
+      
+      
+/*********************************Mode 2 coding***********************/
+    case 2:   
+{
+  if (timer<=4)     //5 tesseracts 
+ 
+ { 
+ {  for (pos = 0; pos <=90 ; pos += 10)  { // goes from 0 degrees to 180 degrees
+                                                   // in steps of 10 degree
+      servo_pivot.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(15);             
+   }     
+   /* Step1: make sure arm is at the same height as platform*/ 
+ } 
+  if (timer1==false)  /* Step2: car moving forward, close to platform*/
+{
+    travel();
+    current = millis();
+    previous = current;
+    if(current-previous >3000)
+    {
+    timer1=true;
+    }
+}   
+ 
+ if ((timer1==true)&&(timer2==false))
+ {
+  Mode2Scan();   //Step 3: Check if pick up tesseracts, if not keep scanning until hall-effect sensor changes*/
+  timer2=true;
+ }
 
-    /*case 2:    //Calibrate line tracker light levels after 3 seconds
-      {
-        if (bt_3_S_Time_Up)
-        {
-          if (!bt_Cal_Initialized)
-          {
-            bt_Cal_Initialized = true;
-            ui_Left_Line_Tracker_Light = 0;
-            ui_Middle_Line_Tracker_Light = 0;
-            ui_Right_Line_Tracker_Light = 0;
-            ul_Calibration_Time = millis();
-            ui_Cal_Count = 0;
-          }
-          else if ((millis() - ul_Calibration_Time) > ci_Line_Tracker_Calibration_Interval)
-          {
-            ul_Calibration_Time = millis();
-            readLineTrackers();
-            ui_Left_Line_Tracker_Light += ui_Left_Line_Tracker_Data;
-            ui_Middle_Line_Tracker_Light += ui_Middle_Line_Tracker_Data;
-            ui_Right_Line_Tracker_Light += ui_Right_Line_Tracker_Data;
-            ui_Cal_Count++;
-          }
-          if (ui_Cal_Count == ci_Line_Tracker_Cal_Measures)
-          {
-            ui_Left_Line_Tracker_Light /= ci_Line_Tracker_Cal_Measures;
-            ui_Middle_Line_Tracker_Light /= ci_Line_Tracker_Cal_Measures;
-            ui_Right_Line_Tracker_Light /= ci_Line_Tracker_Cal_Measures;
-      #ifdef DEBUG_LINE_TRACKER_CALIBRATION
-            Serial.print("Light Levels: Left = ");
-            Serial.print(ui_Left_Line_Tracker_Light, DEC);
-            Serial.print(", Middle = ");
-            Serial.print(ui_Middle_Line_Tracker_Light, DEC);
-            Serial.print(", Right = ");
-            Serial.println(ui_Right_Line_Tracker_Light, DEC);
-      #endif
-            EEPROM.write(ci_Left_Line_Tracker_Light_Address_L, lowByte(ui_Left_Line_Tracker_Light));
-            EEPROM.write(ci_Left_Line_Tracker_Light_Address_H, highByte(ui_Left_Line_Tracker_Light));
-            EEPROM.write(ci_Middle_Line_Tracker_Light_Address_L, lowByte(ui_Middle_Line_Tracker_Light));
-            EEPROM.write(ci_Middle_Line_Tracker_Light_Address_H, highByte(ui_Middle_Line_Tracker_Light));
-            EEPROM.write(ci_Right_Line_Tracker_Light_Address_L, lowByte(ui_Right_Line_Tracker_Light));
-            EEPROM.write(ci_Right_Line_Tracker_Light_Address_H, highByte(ui_Right_Line_Tracker_Light));
-            ui_Robot_State_Index = 0;    // go back to Mode 0
-          }
-          ui_Mode_Indicator_Index = 2;
-        }
+ if((timer2==true)&&(timer3==false))
+ { 
+  // Go back 2 seconds 
+  servo_LeftMotor.writeMicroseconds(1300);         //servo motor
+  servo_RightMotor.writeMicroseconds(1300);          //servo motor
+  current = millis();
+  previous = current;
+ }
+  if( (current-previous)>1000)
+      { timer3=true;}
+ }
+ if((timer3==true)&&(timer4==false))  //Step4: turn 90 degree clockwise
+ {
+    servo_LeftMotor.writeMicroseconds(1500);          
+    servo_RightMotor.writeMicroseconds(1750);
+     if( (current-previous)>1000)
+      { timer4=true;}
+ }
+if((timer4==true)&&(timer5==false))  //lower arm and go forward    
+ {
+   if(lo==false)
+ {  for(int r=1500;r>=1200;r=r-10)                //lower arm, only execute once 
+   {armMotor.writeMicroseconds(r);}
+   lo=true;
+ }
+   else
+ {
+    servo_LeftMotor.writeMicroseconds(1750);        //go forward and pass the gate(height limitations)
+    servo_RightMotor.writeMicroseconds(1750);
+  if( (current-previous)>1000)
+    {timer5=true;}
+ }       
+ }
+ if((timer5==true)&&(timer6==false)) 
+ {
+   for(int r=1200;r<=1900;r=r+10)                //pivot arm, only execute once 
+   pivotMotor.writeMicroseconds(r);
+   for(int d=1500;d<=1800;d=d+10)               //flip arm, make tesseract face upside
+   armMotor.writeMicroseconds(d);
+   for (int pos1 = 0; pos1 <= timer*30; pos1 += 1 )                                     //turntable rotates every time robot releases tesseracts
+   servo_turntable.write(pos);
+   for(int pos2 = 0; pos2 <= 180; pos2 += 1)                           //spin the magnet arm, release magnet,BOO!!!
+   servo_magnet.write(pos);
+  
+   timer6=true;
+ } 
+ 
+ if((timer6==true)&&(timer7==false))   //robot back to default mode
+ {
+   servo_magnet.write(90);
+   servo_turntable.write(timer*30);
+   for(int d=1800;d>=1500;d=d-10)               //flip arm back
+   armMotor.writeMicroseconds(d);
+   for(int r=1900;r>=1200;r=r-10)                
+   pivotMotor.writeMicroseconds(r);
+   goback(3);
+   while(current-previous>1500)
+   {
+    servo_LeftMotor.writeMicroseconds(1750);          
+    servo_RightMotor.writeMicroseconds(1500);
+   }
+   
+   timer7=true;
+ }
+ if(timer7==true)
+  {
+    timer++;
+timer1=false; 
+timer2=false; 
+timer3=false; 
+timer4=false; 
+timer5=false; 
+timer6=false; 
+timer7=false;  
         break;
-      }
-
+  }
+}
       case 3:    // Calibrate line tracker dark levels after 3 seconds
       {
         if (bt_3_S_Time_Up)
@@ -825,8 +929,4 @@ void loop() {
       Indicator();*/
   }
 }
-
-
-/******************************************************************* END MAIN LOOP ******************************************************/
-
 
