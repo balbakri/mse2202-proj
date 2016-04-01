@@ -37,7 +37,9 @@ const int ci_Charlieplex_LED4 = 1;//7
 const int ci_Mode_Button = 0;
 const int ci_Right_Motor = 8;
 const int ci_Left_Motor = 9;
-const int ci_Motor_Enable_Switch = 12;
+const int ci_LeftPivot_Motor= 13;
+const int ci_RightPivot_Motor=12;
+//const int ci_Motor_Enable_Switch = 12;  
 const int ci_Right_Line_Tracker = A0;
 const int ci_Middle_Line_Tracker = A1;
 const int ci_Left_Line_Tracker = A2;
@@ -55,8 +57,7 @@ const int ci_I2C_SCL = A5;         // I2C clock = yellow
   const int ci_Left_Line_Tracker_LED = 12;
   const int ci_ultrasonic_LED = 8; // pin LED for ultrasonic sensor*/
 
-const int ci_servo_turntable = 13;
-const int ci_servo_pivot = 12;
+const int ci_servo_turntable = 1;
 const int ci_servo_arm = 11;
 const int ci_servo_magnet = 10;
 
@@ -148,8 +149,9 @@ boolean bt_Cal_Initialized = false;
 Servo servo_RightMotor;
 Servo servo_LeftMotor;
 
-Servo servo_turntable, servo_pivot, servo_arm, servo_magnet;
-
+Servo servo_turntable,servo_arm,servo_magnet;
+Servo servo_LeftPivot;
+Servo servo_RightPivot;
 I2CEncoder encoder_RightMotor;
 I2CEncoder encoder_LeftMotor;
 
@@ -174,10 +176,18 @@ void setup() {
   servo_RightMotor.attach(ci_Right_Motor);
   pinMode(ci_Left_Motor, OUTPUT);
   servo_LeftMotor.attach(ci_Left_Motor);
-
+//setup pivot leftarm motors
+  pinMode(ci_LeftPivot_Motor,OUTPUT);
+  servo_LeftPivot.attach(ci_LeftPivot_Motor);
+//setup pivot rightarm motors
+ pinMode(ci_RightPivot_Motor,OUTPUT);
+  servo_RightPivot.attach(ci_RightPivot_Motor);
   // set up motor enable switch
-  pinMode(ci_Motor_Enable_Switch, INPUT);
-
+ // pinMode(ci_Motor_Enable_Switch, INPUT);
+//set up arm motor
+  pinMode(ci_servo_arm,OUTPUT);
+  servo_arm.attach(ci_servo_arm);
+  
   // set up encoders. Must be initialized in order that they are chained together,
   // starting with the encoder directly connected to the Arduino. See I2CEncoder docs
   // for more information
@@ -220,7 +230,7 @@ void setup() {
 
   //attach servo motors being used
   servo_turntable.attach(ci_servo_turntable);
-  servo_pivot.attach(ci_servo_pivot);
+//  servo_pivot.attach(ci_servo_pivot);
   servo_arm.attach(ci_servo_arm);
   servo_magnet.attach(ci_servo_magnet);
 
@@ -256,6 +266,7 @@ bool timer1=false;
 bool timer2=false;
 bool lo=false;
 bool timer3=false;bool timer4=false;bool timer5=false;bool timer6=false;bool timer7=false;
+bool timer9=false;
 void readLineTrackers()
 {
   ui_Left_Line_Tracker_Data = analogRead(ci_Left_Line_Tracker);
@@ -634,6 +645,23 @@ void loop() {
 
 //testing code^^^^^^
 
+ for (pos = 0; pos <= 90; pos += 1) { // goes from 0 degrees to 180 degrees
+      servo_turntable.write(pos);   
+     delay(15);
+ }
+ for(int u=0;u<35;u=u+5)
+ {
+ servo_RightPivot.writeMicroseconds(u);
+ servo_LeftPivot.writeMicroseconds(u);
+ delay(15);
+ }
+for(int u=0;u<180;u++)
+{
+servo_arm.writeMicroseconds(180);
+delay(15);
+}
+       
+
   if ((millis() - ul_3_Second_timer) > 3000)
   {
     bt_3_S_Time_Up = true;
@@ -659,7 +687,7 @@ void loop() {
   }
 
   // check if drive motors should be powered
-  bt_Motors_Enabled = digitalRead(ci_Motor_Enable_Switch);
+  //bt_Motors_Enabled = digitalRead(ci_Motor_Enable_Switch);
 
   // modes
   // 0 = default after power up/reset
@@ -705,7 +733,36 @@ void loop() {
             Main operation code HERE
             Implementation of mode 1 operations of MSE 2202 Project
             /**************************************************************************************************************************************/
- 
+//testing code
+ for (pos = 0; pos <= 90; pos += 1) { // goes from 0 degrees to 180 degrees
+      servo_turntable.write(pos);   
+     delay(15);
+ }
+ for(int u=0;u>-65;u=u-5)
+ {
+ servo_RightPivot.writeMicroseconds(u);
+ servo_LeftPivot.writeMicroseconds(u);
+ delay(15);
+ }
+
+servo_arm.writeMicroseconds(0);
+delay(15);
+
+       
+
+/*
+for(int o=53;o<=105;o++)
+{
+servo_magnet.write(o);
+delay(15);
+}
+*/
+/*
+for(int i=23;i<=100;i=i+10)        //testing pivot arm
+ {
+ servo_RightPivot.writeMicroseconds(i);
+ servo_LeftPivot.writeMicroseconds(i);
+ }
  
   if (ui_Left_Line_Tracker_Data>950)
   {
@@ -774,25 +831,31 @@ void loop() {
           Serial.println(ui_Right_Motor_Speed);
 #endif
           ui_Mode_Indicator_Index = 1;
-        }
+        } */
         break;
       }
-      
+     
       
 /*********************************Mode 2 coding***********************/
     case 2:   
 {
-  if (timer<=4)     //5 tesseracts 
  
- { 
- {  for (pos = 0; pos <=90 ; pos += 10)  { // goes from 0 degrees to 180 degrees
+ /* if (timer<=4)     //5 tesseracts 
+ {
+ if(timer9==false)
+ {
+   for (int l = 0; l <=90 ;  l=l+ 10) 
+   {                                       // goes from 0 degrees to 180 degrees
                                                    // in steps of 10 degree
-      servo_pivot.write(pos);              // tell servo to go to position in variable 'pos'
+  servo_RightPivot.writeMicroseconds(l);
+  servo_LeftPivot.writeMicroseconds(l);       
       delay(15);             
    }     
-   /* Step1: make sure arm is at the same height as platform*/ 
- } 
-  if (timer1==false)  /* Step2: car moving forward, close to platform*/
+ timer9=true;
+ }
+  /* Step1: make sure arm is at the same height as platform*/ 
+ 
+  if ((timer1==false)&&(timer9==true))  /* Step2: car moving forward, close to platform
 {
     travel();
     current = millis();
@@ -805,7 +868,7 @@ void loop() {
  
  if ((timer1==true)&&(timer2==false))
  {
-  Mode2Scan();   //Step 3: Check if pick up tesseracts, if not keep scanning until hall-effect sensor changes*/
+  Mode2Scan();   //Step 3: Check if pick up tesseracts, if not keep scanning until hall-effect sensor changes
   timer2=true;
  }
 
@@ -819,7 +882,7 @@ void loop() {
  }
   if( (current-previous)>1000)
       { timer3=true;}
- }
+ 
  if((timer3==true)&&(timer4==false))  //Step4: turn 90 degree clockwise
  {
     servo_LeftMotor.writeMicroseconds(1500);          
@@ -831,7 +894,10 @@ if((timer4==true)&&(timer5==false))  //lower arm and go forward
  {
    if(lo==false)
  {  for(int r=1500;r>=1200;r=r-10)                //lower arm, only execute once 
-   {armMotor.writeMicroseconds(r);}
+   {
+     servo_LeftPivot.writeMicroseconds(r);
+     servo_RightPivot.writeMicroseconds(r); 
+    }
    lo=true;
  }
    else
@@ -845,9 +911,12 @@ if((timer4==true)&&(timer5==false))  //lower arm and go forward
  if((timer5==true)&&(timer6==false)) 
  {
    for(int r=1200;r<=1900;r=r+10)                //pivot arm, only execute once 
-   pivotMotor.writeMicroseconds(r);
+   {
+   servo_RightPivot.writeMicroseconds(r);
+  servo_LeftPivot.writeMicroseconds(r); 
+   }
    for(int d=1500;d<=1800;d=d+10)               //flip arm, make tesseract face upside
-   armMotor.writeMicroseconds(d);
+  servo_arm.writeMicroseconds(d);
    for (int pos1 = 0; pos1 <= timer*30; pos1 += 1 )                                     //turntable rotates every time robot releases tesseracts
    servo_turntable.write(pos);
    for(int pos2 = 0; pos2 <= 180; pos2 += 1)                           //spin the magnet arm, release magnet,BOO!!!
@@ -861,9 +930,12 @@ if((timer4==true)&&(timer5==false))  //lower arm and go forward
    servo_magnet.write(90);
    servo_turntable.write(timer*30);
    for(int d=1800;d>=1500;d=d-10)               //flip arm back
-   armMotor.writeMicroseconds(d);
+   servo_arm.writeMicroseconds(d);
    for(int r=1900;r>=1200;r=r-10)                
-   pivotMotor.writeMicroseconds(r);
+  {
+   servo_RightPivot.writeMicroseconds(r);
+   servo_LeftPivot.writeMicroseconds(r); 
+  }
    goback(3);
    while(current-previous>1500)
    {
@@ -883,8 +955,16 @@ timer4=false;
 timer5=false; 
 timer6=false; 
 timer7=false;  
-        break;
   }
+ }
+ else
+ {
+ servo_LeftMotor.writeMicroseconds(1500);   //finish all stuff and stop
+    servo_RightMotor.writeMicroseconds(1500);
+ 
+ }
+ */
+ break;
 }
       case 3:    // Calibrate line tracker dark levels after 3 seconds
       {
@@ -932,7 +1012,7 @@ timer7=false;
           ui_Mode_Indicator_Index = 3;
         }
         break;
-      }*/
+      }
 
     case 4:    //Calibrate motor straightness after 3 seconds.
       {
@@ -1004,5 +1084,6 @@ timer7=false;
       digitalWrite(13, bt_Heartbeat);
       Indicator();*/
   }
+}
 }
 
