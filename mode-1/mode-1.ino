@@ -489,7 +489,83 @@ void turn() {//turns on either end when it reaches the end wall
 
 }
 
+bool step1 = false;
+bool step2 = false;
+bool step3 = false;
+bool step4 = false;
+bool step5 = false;
+bool step6 = false;
+bool step7 = false;
+bool step8 = false;
+bool step9 = false;
+bool step10 = false;
+bool step11 = false;
+bool step12 = false;
+
 void GoHome() { //after tesserack is collected, goes home to place tesseract and then returns to previous position
+
+if (step1 == true){
+  //tur 90 degrees left
+  //servo_LeftMotor.writeMicroseconds();
+  //servo_RightMotor.writeMicroseconds();
+
+  //if ()turn is complete{
+// step1 =false; step2 = true;}
+}
+else if (step2 == true){
+  //move forward until "25 cm" from wall
+    servo_LeftMotor.writeMicroseconds(bot_speed);
+  servo_RightMotor.writeMicroseconds(bot_speed);
+  //servo_LeftMotor.writeMicroseconds();
+  //servo_RightMotor.writeMicroseconds();
+
+  //if ((ul_Echo_Time_Front / 24)>=25){//reached 25 cm away from wall
+// step2 =false; step3 = true;
+}
+else if (step3 == true){
+    //tur 90 degrees left
+  //servo_LeftMotor.writeMicroseconds();
+  //servo_RightMotor.writeMicroseconds();
+
+  //if ()turn is complete{
+// step3 =false; step4 = true;}
+}
+else if (step4 == true){
+  //move forward until "25 cm" from wall
+    servo_LeftMotor.writeMicroseconds(bot_speed);
+  servo_RightMotor.writeMicroseconds(bot_speed);
+  //servo_LeftMotor.writeMicroseconds();
+  //servo_RightMotor.writeMicroseconds();
+
+  //if ((ul_Echo_Time_Front / 24)>=25){//reached 25 cm away from wall
+// step4 =false; step5 = true;
+}
+else if (step5 == true){
+  //detect lines and positions to place tesseracts using ultrasonic and line tracker
+  /*
+   * if(completed detection){
+   * step5 = false; step6 = true;
+   * }
+   */
+}
+else if (step6 == true){
+  /*
+   * place tesseract in position
+   * if(completed placement){
+   * step6 = false; step7 = true;
+   * }
+   */
+}
+else if(step7 == true){
+/*
+ * 
+ * 
+ * return to orignal position be reading previous and current encoder values of vex motor of wheel and making them travel
+ * that distance. this may take more steps than step7
+ */
+  
+}
+  
   left_wheel = encoder_LeftMotor.getRawPosition();
   right_wheel = encoder_RightMotor.getRawPosition();
   //need to add code to obtain left_wheel_prev.....same for right wheel********
