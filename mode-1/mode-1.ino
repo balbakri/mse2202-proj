@@ -231,6 +231,9 @@ int previous = 0;
 int current = 0;
 int previous_ping = 0;
 int current_ping = 0;
+int previous_scan = 0;
+int current_scan = 0;
+
 bool drive = true;
 int bot_speed = 1300;
 int bot_stop = 1500;
@@ -307,19 +310,32 @@ int pos = 0;
 
 void scan() {//rotates arm to scan for good tesseracks
   if (clockwise == false) {
-    for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
-      // in steps of 1 degree
-      servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
-      delay(15);                       // waits 15ms for the servo to reach the position
-    }
-    clockwise = true;
+
+    pos++;
+    servo_turntable.write(pos);
+    if (pos >= 180)
+      clockwise = true;
+    /*
+        for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
+          // in steps of 1 degree
+          servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
+          delay(15);                       // waits 15ms for the servo to reach the position
+        }
+        clockwise = true;
+    */
   }
   else {
-    for (pos = 180; pos >= 0; pos -= 1) { // goes from 180 degrees to 0 degrees
-      servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
-      delay(15);                       // waits 15ms for the servo to reach the position
-    }
-    clockwise = false;
+    pos--;
+    servo_turntable.write(pos);
+    if (pos <= 0)
+      clockwise = false;
+    /*
+        for (pos = 180; pos >= 0; pos -= 1) { // goes from 180 degrees to 0 degrees
+          servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
+          delay(15);                       // waits 15ms for the servo to reach the position
+        }
+        clockwise = false;
+    */
   }
 }
 
@@ -438,7 +454,6 @@ void travel() {//makes robot travel straight, main movement function of robot
 }
 
 void turn() {//turns on either end when it reaches the end wall
-  Serial.println(left_wheel);
   left_wheel = encoder_LeftMotor.getRawPosition();
   right_wheel = encoder_RightMotor.getRawPosition();
 
@@ -451,7 +466,7 @@ void turn() {//turns on either end when it reaches the end wall
     servo_RightMotor.writeMicroseconds(bot_speed);
   }
 
-  if ((abs(left_wheel-left_wheel_prev) >= 1800)||(abs(right_wheel-right_wheel_prev) >= 1800)) { //when full turn is complete // should be 93(abs(right_wheel) >= 93)
+  if ((abs(left_wheel - left_wheel_prev) >= 1800) || (abs(right_wheel - right_wheel_prev) >= 1800)) { //when 180 degree turn is complete
     start_turn = false;
     end_turn = true;
     num_turns++;
@@ -471,21 +486,41 @@ void turn() {//turns on either end when it reaches the end wall
 }
 
 void GoHome() { //after tesserack is collected, goes home to place tesseract and then returns to previous position
+  left_wheel = encoder_LeftMotor.getRawPosition();
+  right_wheel = encoder_RightMotor.getRawPosition();
+  //need to add code to obtain left_wheel_prev.....same for right wheel********
 
-  //do two 90 degree turns to go home.
+  if (num_turns % 2 == 0) {//use LEFT ultrasonic to detect wall and travel in a straight path
+    servo_LeftMotor.writeMicroseconds(bot_stop + 100);//moves left wheel backward
+    servo_RightMotor.writeMicroseconds(bot_stop - 100);//moves right wheel forward
+    //turn 90 degrees left ward
+  }
 
+  else { //use RIGHT ultrasonic to detect wall and travel in a straight path
+
+    servo_LeftMotor.writeMicroseconds(bot_stop - 100);//moves left wheel forward
+    servo_RightMotor.writeMicroseconds(bot_stop + 100);//moves right wheel backward
+    //turn 90 degrees right
+  }
+  //do two 90 degree turns to go home....900 might not be correct
+  if ((abs(left_wheel - left_wheel_prev) >= 900) || (abs(right_wheel - right_wheel_prev) >= 900)) { //when quarter turn is complete might need to adjust value here
+    servo_LeftMotor.writeMicroseconds(bot_stop);
+    servo_RightMotor.writeMicroseconds(bot_stop);
+  }
+
+  /*if (ul_Echo_Time_Front / 24) <= 35) {//if ultrasonic detects wall in front of it 35 cm away
+    //turn 90 degree leftward
+    servo_LeftMotor.writeMicroseconds(bot_stop + 100);//moves left wheel backward
+    servo_RightMotor.writeMicroseconds(bot_stop - 100);//moves right wheel forward
+    }*/
 
 }
 
 /************************************************************* MAIN LOOP *****************************************************************/
 void loop() {
-  //Ping_Front();
-  //left_wheel += encoder_LeftMotor.getRawPosition();
-  //right_wheel += encoder_RightMotor.getRawPosition();
-  /*Serial.print("Encoders L: ");
-    Serial.print(left_wheel);
-    Serial.print(", R: ");
-    Serial.println(right_wheel);*/
+  //servo_arm.write(180);
+  //servo_pivot.write(70);
+
 
 
   if ((millis() - ul_3_Second_timer) > 3000)
@@ -560,48 +595,51 @@ void loop() {
             Implementation of mode 1 operations of MSE 2202 Project
 
             /**************************************************************************************************************************************/
-
-          current = millis();
-          current_ping = millis();
-          
-          if ((current_ping - previous_ping) > 500) {
-            Ping_Front();
-            Ping_Right();
-            Ping_Left();
-            previous_ping = current_ping;
-          }
-
-          if (drive == true) {//drive forward
-            //CharliePlexM::Write(3, HIGH);
-
-            if (((ul_Echo_Time_Front / 24) <= 35) && (end_turn == true)) {
-              start_turn = true;
-              left_wheel_prev = encoder_LeftMotor.getRawPosition();
-              right_wheel_prev = encoder_RightMotor.getRawPosition();
-              end_turn = false;
-            }
-            if (start_turn == true) {
-              turn();
-            }
-            //insert if statement for when tessarct is picked up to initiate going home
-            //insert if statement in case front line trackers detect that we have reached the neutral zone
-            else {
-              travel();
-            }
-
-          }
-
-          else if (drive == false) {
-            //CharliePlexM::Write(3, LOW);
+          current_scan = millis();
+          if ((current_scan - previous_scan) > 15) {
             scan();
-            y++;
-            drive = true;//after finished scanning continue driving
-            current = millis();
-            previous = current;
+            previous_scan = current_scan;
           }
+          /*
+                    current = millis();
+                    current_ping = millis();
 
+                    if ((current_ping - previous_ping) > 500) {
+                      Ping_Front();
+                      Ping_Right();
+                      Ping_Left();
+                      previous_ping = current_ping;
+                    }
 
+                    if (drive == true) {//drive forward
+                      //CharliePlexM::Write(3, HIGH);
 
+                      if (((ul_Echo_Time_Front / 24) <= 35) && (end_turn == true)) {
+                        start_turn = true;
+                        left_wheel_prev = encoder_LeftMotor.getRawPosition();
+                        right_wheel_prev = encoder_RightMotor.getRawPosition();
+                        end_turn = false;
+                      }
+                      if (start_turn == true) {
+                        turn();
+                      }
+                      //insert if statement for when tessarct is picked up to initiate going home
+                      //insert if statement in case front line trackers detect that we have reached the neutral zone
+                      else {
+                        travel();
+                      }
+
+                    }
+
+                    else if (drive == false) {
+                      //CharliePlexM::Write(3, LOW);
+                      scan();
+                      y++;
+                      drive = true;//after finished scanning continue driving
+                      current = millis();
+                      previous = current;
+                    }
+          */
 
 
 
