@@ -157,7 +157,7 @@ I2CEncoder encoder_LeftMotor;
 /*****************************************************************SETUP************************************************************/
 void setup() {
   Wire.begin();
-  //Serial.begin(9600);
+  //Serial.begin(9600);//comment this after finished debugging
 
   //setup ultrasonic
   pinMode(ci_Ultrasonic_Ping_Front, OUTPUT);
@@ -234,7 +234,7 @@ void setup() {
   servo_RightPivot.attach(ci_RightPivot_Motor);
 
   //initialize servo positions
-  servo_RightPivot.write(30);
+  servo_RightPivot.write(25);
   servo_LeftPivot.write(180 - 30);
   servo_turntable.write(51);
   servo_arm.write(170);
@@ -335,7 +335,7 @@ void scan() {//rotates arm to scan for good tesseracks
 
     pos++;
     servo_turntable.write(pos);
-    if (pos >= 130) { //180 means maximum to left side of robot
+    if (pos >= 165) { //180 means maximum to left side of robot
       //clockwise = true;
       previous = current;
       drive = true;
@@ -345,7 +345,7 @@ void scan() {//rotates arm to scan for good tesseracks
   else {
     pos--;
     servo_turntable.write(pos);
-    if (pos <= 50) { //0 means maximum to right side of robot
+    if (pos <= 40) { //0 means maximum to right side of robot
       drive = true;//clockwise = false;
       previous = current;
       num_scans++;
@@ -769,16 +769,6 @@ void loop() {
               }*/
 
           //else {
-          /*current = millis();
-            if ((current - previous) > 50) {
-            scan();
-            previous = current;
-            }
-
-            servo_RightPivot.write(40);
-            servo_LeftPivot.write(40);*/
-
-
 
           current = millis();
           current_scan = millis();
@@ -793,46 +783,38 @@ void loop() {
 
           if (drive == true) {//drive forward
             //CharliePlexM::Write(3, HIGH);
-
-            /*if (((ul_Echo_Time_Front / 24) <= 35) && (end_turn == true)) {
+            if (((ul_Echo_Time_Front / 24) <= 35) && (end_turn == true)) {
               start_turn = true;
               left_wheel_prev = encoder_LeftMotor.getRawPosition();
               right_wheel_prev = encoder_RightMotor.getRawPosition();
               end_turn = false;
-              }
-              if (start_turn == true) {
-              turn();
-              }
-              //insert if statement for when tessarct is picked up to initiate going home
-              //insert if statement in case front line trackers detect that we have reached the neutral zone
-              else {
-              travel();
-              }*/
+            }
 
             if ((current - previous) > 500) { //stop after one second
 
               drive = false;
             }
-            else
-              travel();
+            else {
+              if (start_turn == true)
+                turn();
+              else
+                travel();
+            }
 
           }
 
           else if (drive == false) {
             //CharliePlexM::Write(3, LOW);
+            servo_LeftMotor.writeMicroseconds(bot_stop);//robot stops for scanning
+            servo_RightMotor.writeMicroseconds(bot_stop);
+
             if ((current_scan - previous_scan) > 30) {
               scan();
               current_scan = millis();
               previous_scan = current_scan;
             }
 
-
-            servo_LeftMotor.writeMicroseconds(bot_stop);
-            servo_RightMotor.writeMicroseconds(bot_stop);
             //y++;
-            //drive = true;//after finished scanning continue driving
-            //current = millis();
-            //previous = current;
           }
           //}
 
