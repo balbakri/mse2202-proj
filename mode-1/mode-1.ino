@@ -40,9 +40,10 @@ const int ci_Left_Motor = 9;
 const int ci_LeftPivot_Motor = 13;
 const int ci_RightPivot_Motor = 12;
 //const int ci_Motor_Enable_Switch = 12;
-const int ci_Right_Line_Tracker = A0;
-const int ci_Middle_Line_Tracker = A1;
-const int ci_Left_Line_Tracker = A2;
+const int ci_Hall_Effect = A0;
+const int ci_Right_Line_Tracker = A1;
+const int ci_Middle_Line_Tracker = A2;
+const int ci_Left_Line_Tracker = A3;
 const int ci_I2C_SDA = A4;         // I2C data = white
 const int ci_I2C_SCL = A5;         // I2C clock = yellow
 
@@ -234,11 +235,11 @@ void setup() {
   servo_RightPivot.attach(ci_RightPivot_Motor);
 
   //initialize servo positions
-  servo_RightPivot.write(25);
-  servo_LeftPivot.write(180 - 30);
+  servo_RightPivot.write(28);
+  servo_LeftPivot.write(180 - 35);
   servo_turntable.write(51);
   servo_arm.write(170);
-  servo_magnet.write(53);
+  servo_magnet.write(41);
 
 }
 /*********************************************************************END SETUP**************************************************************/
@@ -252,7 +253,7 @@ int previous_scan = 0;
 int current_scan = 0;
 
 bool drive = true;
-int bot_speed = 1300;
+int bot_speed = 1700;
 int bot_stop = 1500;
 bool start_turn = false;//used to indicate when turn has started or not
 bool end_turn = true;//used to indicate when turn has ended or not
@@ -327,7 +328,7 @@ void readLineTrackers()
   }*/
 
 bool clockwise = true;
-int pos = 50;
+int pos = 40;
 
 void scan() {//rotates arm to scan for good tesseracks
 
@@ -335,7 +336,7 @@ void scan() {//rotates arm to scan for good tesseracks
 
     pos++;
     servo_turntable.write(pos);
-    if (pos >= 165) { //180 means maximum to left side of robot
+    if (pos >= 120) { //180 means maximum to left side of robot
       //clockwise = true;
       previous = current;
       drive = true;
@@ -429,12 +430,12 @@ void travel() {//makes robot travel straight, main movement function of robot
 
   if (num_turns % 2 == 0) {//use LEFT ultrasonic to detect wall and travel in a straight path
     if ((ul_Echo_Time_Left / 24) >= (10.5 + (25 * num_turns))) { //if moving AWAY FROM wall turn left
-      servo_LeftMotor.writeMicroseconds(bot_speed + 10); //left motor moves slower
+      servo_LeftMotor.writeMicroseconds(bot_speed - 10); //left motor moves slower
       servo_RightMotor.writeMicroseconds(bot_speed);
     }
     else if ((ul_Echo_Time_Left / 24) <= (9.5 + (25 * num_turns))) { //if moving TOWARD wall, turn right
       servo_LeftMotor.writeMicroseconds(bot_speed);
-      servo_RightMotor.writeMicroseconds(bot_speed + 1); //right motor moves slower. This is small because robot leans to the right
+      servo_RightMotor.writeMicroseconds(bot_speed - 1); //right motor moves slower. This is small because robot leans to the right
     }
     else {//when in correct position do not adjust speed
       servo_LeftMotor.writeMicroseconds(bot_speed);
@@ -445,10 +446,10 @@ void travel() {//makes robot travel straight, main movement function of robot
   else { //use RIGHT ultrasonic to detect wall and travel in a straight path
     if ((ul_Echo_Time_Right / 24) >= (10.5 + (25 * num_turns))) { //if moving TOWARD wall, turn right
       servo_LeftMotor.writeMicroseconds(bot_speed);
-      servo_RightMotor.writeMicroseconds(bot_speed + 10); //right motor moves slower
+      servo_RightMotor.writeMicroseconds(bot_speed - 10); //right motor moves slower
     }
     else if ((ul_Echo_Time_Right / 24) <= (9.5 + (25 * num_turns))) { //if moving AWAY FROM wall, turn left
-      servo_LeftMotor.writeMicroseconds(bot_speed + 10); //left motor moves slower
+      servo_LeftMotor.writeMicroseconds(bot_speed - 10); //left motor moves slower
       servo_RightMotor.writeMicroseconds(bot_speed);
     }
     else {//when in correct position do not adjust speed
@@ -774,7 +775,8 @@ void loop() {
           current_scan = millis();
           current_ping = millis();
 
-          if ((current_ping - previous_ping) > 500) {
+          if (((current_ping - previous_ping) > 500) && (drive == true)) {
+
             Ping_Front();
             Ping_Right();
             Ping_Left();
@@ -783,14 +785,14 @@ void loop() {
 
           if (drive == true) {//drive forward
             //CharliePlexM::Write(3, HIGH);
-            if (((ul_Echo_Time_Front / 24) <= 35) && (end_turn == true)) {
+            if (((ul_Echo_Time_Front / 24) <= 45) && (end_turn == true)) {
               start_turn = true;
               left_wheel_prev = encoder_LeftMotor.getRawPosition();
               right_wheel_prev = encoder_RightMotor.getRawPosition();
               end_turn = false;
             }
 
-            if ((current - previous) > 500) { //stop after one second
+            if ((current - previous) > 300) { //stop after 0.3 second
 
               drive = false;
             }
@@ -808,13 +810,15 @@ void loop() {
             servo_LeftMotor.writeMicroseconds(bot_stop);//robot stops for scanning
             servo_RightMotor.writeMicroseconds(bot_stop);
 
-            if ((current_scan - previous_scan) > 30) {
+            if ((current_scan - previous_scan) > 40) {
               scan();
               current_scan = millis();
               previous_scan = current_scan;
             }
 
-            //y++;
+
+
+
           }
           //}
 
