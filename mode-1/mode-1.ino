@@ -198,6 +198,9 @@ void setup() {
   pinMode(ci_Left_Line_Tracker, INPUT);
   ui_Line_Tracker_Tolerance = ci_Line_Tracker_Tolerance;
 
+  //set up hall effect sensor
+  pinMode(ci_Hall_Effect, INPUT);
+
   // read saved values from EEPROM
   b_LowByte = EEPROM.read(ci_Left_Line_Tracker_Dark_Address_L);
   b_HighByte = EEPROM.read(ci_Left_Line_Tracker_Dark_Address_H);
@@ -237,9 +240,9 @@ void setup() {
   //initialize servo positions
   servo_RightPivot.write(28);
   servo_LeftPivot.write(180 - 35);
-  servo_turntable.write(51);
+  servo_turntable.write(41);
   servo_arm.write(170);
-  servo_magnet.write(41);
+  servo_magnet.write(0);//change to 53
 
 }
 /*********************************************************************END SETUP**************************************************************/
@@ -251,6 +254,8 @@ int previous_ping = 0;
 int current_ping = 0;
 int previous_scan = 0;
 int current_scan = 0;
+int previous_magflux = analogRead(ci_Hall_Effect);
+int current_magflux = analogRead(ci_Hall_Effect);
 
 bool drive = true;
 int bot_speed = 1700;
@@ -774,6 +779,7 @@ void loop() {
           current = millis();
           current_scan = millis();
           current_ping = millis();
+          current_magflux = analogRead(ci_Hall_Effect);
 
           if (((current_ping - previous_ping) > 500) && (drive == true)) {
 
@@ -783,7 +789,13 @@ void loop() {
             previous_ping = current_ping;
           }
 
-          if (drive == true) {//drive forward
+          if (abs(current_magflux - previous_magflux) > 10){
+            servo_LeftMotor.writeMicroseconds(bot_stop);//robot stops for scanning
+            servo_RightMotor.writeMicroseconds(bot_stop);
+
+          }
+
+          else if (drive == true) {//drive forward
             //CharliePlexM::Write(3, HIGH);
             if (((ul_Echo_Time_Front / 24) <= 45) && (end_turn == true)) {
               start_turn = true;
@@ -816,10 +828,9 @@ void loop() {
               previous_scan = current_scan;
             }
 
-
-
-
           }
+
+
           //}
 
 #ifdef DEBUG_MOTORS
