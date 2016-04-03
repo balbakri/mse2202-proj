@@ -155,6 +155,8 @@ Servo servo_RightPivot;
 I2CEncoder encoder_RightMotor;
 I2CEncoder encoder_LeftMotor;
 
+int pivot_pos = 28;
+
 /*****************************************************************SETUP************************************************************/
 void setup() {
   Wire.begin();
@@ -238,11 +240,11 @@ void setup() {
   servo_RightPivot.attach(ci_RightPivot_Motor);
 
   //initialize servo positions
-  servo_RightPivot.write(28);
-  servo_LeftPivot.write(180 - 35);
+  servo_RightPivot.write(pivot_pos);
+  servo_LeftPivot.write(180 - pivot_pos);
   servo_turntable.write(41);
   servo_arm.write(170);
-  servo_magnet.write(0);//change to 53
+  servo_magnet.write(115);//change to 115 min, 150 max
 
 }
 /*********************************************************************END SETUP**************************************************************/
@@ -256,6 +258,10 @@ int previous_scan = 0;
 int current_scan = 0;
 int previous_magflux = analogRead(ci_Hall_Effect);
 int current_magflux = analogRead(ci_Hall_Effect);
+int previous_detect = 0;
+int current_detect = 0;
+
+bool holding_tesseract = false;
 
 bool drive = true;
 int bot_speed = 1700;
@@ -486,7 +492,7 @@ void turn() {//turns on either end when it reaches the end wall
     servo_RightMotor.writeMicroseconds(bot_speed);
   }
 
-  if ((abs(left_wheel - left_wheel_prev) >= 1800) || (abs(right_wheel - right_wheel_prev) >= 1800)) { //when 180 degree turn is complete
+  if ((abs(left_wheel - left_wheel_prev) >= 1700) || (abs(right_wheel - right_wheel_prev) >= 1700)) { //when 180 degree turn is complete
     start_turn = false;
     end_turn = true;
     num_turns++;
@@ -519,42 +525,84 @@ bool step11 = false;
 bool step12 = false;
 
 void GoHome() { //after tesserack is collected, goes home to place tesseract and then returns to previous position
+  left_wheel = encoder_LeftMotor.getRawPosition();
+  right_wheel = encoder_RightMotor.getRawPosition();
 
   if (step1 == true) {
-    //tur 90 degrees left
-    //servo_LeftMotor.writeMicroseconds();
-    //servo_RightMotor.writeMicroseconds();
+    if (num_turns % 2 == 0) { // make a 90 degree leftward because left side is facing home
+      servo_LeftMotor.writeMicroseconds(bot_stop - 100);//moves left wheel backward
+      servo_RightMotor.writeMicroseconds(bot_stop + 100);//moves right wheel forward
+      //turn 90 degrees left ward
+    }
 
-    //if ()turn is complete{
-    // step1 =false; step2 = true;}
+    else { // make a 90 degree rightward because right side is facing home
+
+      servo_LeftMotor.writeMicroseconds(bot_stop + 100);//moves left wheel forward
+      servo_RightMotor.writeMicroseconds(bot_stop - 100);//moves right wheel backward
+      //turn 90 degrees right
+    }
+    //do two 90 degree turns to go home....450 might not be correct
+    if ((abs(left_wheel - left_wheel_prev) >= 450) || (abs(right_wheel - right_wheel_prev) >= 450)) { //when quarter turn is complete might need to adjust value here
+      servo_LeftMotor.writeMicroseconds(bot_stop);
+      servo_RightMotor.writeMicroseconds(bot_stop);
+      step1 = false;
+      step2 = true;
+      Ping_Front();
+      delay(500);
+      Ping_Front();
+      delay(500);
+      Ping_Front();
+      delay(500);
+      Ping_Front();
+      delay(500);
+    }
+
   }
   else if (step2 == true) {
-    //move forward until "25 cm" from wall
     servo_LeftMotor.writeMicroseconds(bot_speed);
     servo_RightMotor.writeMicroseconds(bot_speed);
-    //servo_LeftMotor.writeMicroseconds();
-    //servo_RightMotor.writeMicroseconds();
 
-    //if ((ul_Echo_Time_Front / 24)>=25){//reached 25 cm away from wall
-    // step2 =false; step3 = true;
+    if ((ul_Echo_Time_Front / 24) <= 25) { //reached 35 cm away from wall
+      servo_LeftMotor.writeMicroseconds(bot_stop);
+      servo_RightMotor.writeMicroseconds(bot_stop);
+      left_wheel_prev = encoder_LeftMotor.getRawPosition();
+      right_wheel_prev = encoder_RightMotor.getRawPosition();
+      step2 = false;
+      step3 = true;
+    }
   }
   else if (step3 == true) {
-    //tur 90 degrees left
-    //servo_LeftMotor.writeMicroseconds();
-    //servo_RightMotor.writeMicroseconds();
+    servo_LeftMotor.writeMicroseconds(bot_stop - 100);//moves left wheel backward
+    servo_RightMotor.writeMicroseconds(bot_stop + 100);//moves right wheel forward
+    //turn 90 degrees left ward
 
-    //if ()turn is complete{
-    // step3 =false; step4 = true;}
+    //do two 90 degree turns to go home....450 might not be correct
+    if ((abs(left_wheel - left_wheel_prev) >= 450) || (abs(right_wheel - right_wheel_prev) >= 450)) { //when quarter turn is complete might need to adjust value here
+      servo_LeftMotor.writeMicroseconds(bot_stop);
+      servo_RightMotor.writeMicroseconds(bot_stop);
+      step3 = false;
+      step4 = true;
+      Ping_Front();
+      delay(500);
+      Ping_Front();
+      delay(500);
+      Ping_Front();
+      delay(500);
+      Ping_Front();
+      delay(500);
+    }
   }
   else if (step4 == true) {
     //move forward until "25 cm" from wall
     servo_LeftMotor.writeMicroseconds(bot_speed);
     servo_RightMotor.writeMicroseconds(bot_speed);
-    //servo_LeftMotor.writeMicroseconds();
-    //servo_RightMotor.writeMicroseconds();
 
-    //if ((ul_Echo_Time_Front / 24)>=25){//reached 25 cm away from wall
-    // step4 =false; step5 = true;
+    if ((ul_Echo_Time_Front / 24) <= 25) { //reached 35 cm away from wall
+      servo_LeftMotor.writeMicroseconds(bot_stop);
+      servo_RightMotor.writeMicroseconds(bot_stop);
+      step4 = false;
+      //step5 = true;
+    }
   }
   else if (step5 == true) {
     //detect lines and positions to place tesseracts using ultrasonic and line tracker
@@ -586,23 +634,8 @@ void GoHome() { //after tesserack is collected, goes home to place tesseract and
   right_wheel = encoder_RightMotor.getRawPosition();
   //need to add code to obtain left_wheel_prev.....same for right wheel********
 
-  if (num_turns % 2 == 0) {//use LEFT ultrasonic to detect wall and travel in a straight path
-    servo_LeftMotor.writeMicroseconds(bot_stop + 100);//moves left wheel backward
-    servo_RightMotor.writeMicroseconds(bot_stop - 100);//moves right wheel forward
-    //turn 90 degrees left ward
-  }
 
-  else { //use RIGHT ultrasonic to detect wall and travel in a straight path
 
-    servo_LeftMotor.writeMicroseconds(bot_stop - 100);//moves left wheel forward
-    servo_RightMotor.writeMicroseconds(bot_stop + 100);//moves right wheel backward
-    //turn 90 degrees right
-  }
-  //do two 90 degree turns to go home....900 might not be correct
-  if ((abs(left_wheel - left_wheel_prev) >= 900) || (abs(right_wheel - right_wheel_prev) >= 900)) { //when quarter turn is complete might need to adjust value here
-    servo_LeftMotor.writeMicroseconds(bot_stop);
-    servo_RightMotor.writeMicroseconds(bot_stop);
-  }
 
   /*if (ul_Echo_Time_Front / 24) <= 35) {//if ultrasonic detects wall in front of it 35 cm away
     //turn 90 degree leftward
@@ -644,9 +677,9 @@ void goback(int a)
 
 /************************************************************* MAIN LOOP *****************************************************************/
 void loop() {
+
   //servo_arm.write(180);
   //servo_pivot.write(70);
-
   //left_wheel += encoder_LeftMotor.getRawPosition();
   //right_wheel += encoder_RightMotor.getRawPosition();
   /*Serial.print("Encoders L: ");
@@ -701,6 +734,10 @@ void loop() {
         encoder_LeftMotor.zero();
         encoder_RightMotor.zero();
         ui_Mode_Indicator_Index = 0;
+
+        previous_magflux = analogRead(ci_Hall_Effect);
+        current_magflux = previous_magflux;
+
         break;
       }
 
@@ -779,9 +816,18 @@ void loop() {
           current = millis();
           current_scan = millis();
           current_ping = millis();
-          current_magflux = analogRead(ci_Hall_Effect);
+          current_detect = millis();
 
-          if (((current_ping - previous_ping) > 500) && (drive == true)) {
+          servo_RightPivot.write(pivot_pos);
+          servo_LeftPivot.write(180 - pivot_pos);
+
+          if ((current_detect - previous_detect) > 100) {//read hall effect sensor every 100 milliseconds
+            current_magflux = analogRead(ci_Hall_Effect);
+            previous_detect = current_detect;
+          }
+
+
+          if ((((current_ping - previous_ping) > 500) && (drive == true)) || holding_tesseract == true) {
 
             Ping_Front();
             Ping_Right();
@@ -789,9 +835,21 @@ void loop() {
             previous_ping = current_ping;
           }
 
-          if (abs(current_magflux - previous_magflux) > 10){
-            servo_LeftMotor.writeMicroseconds(bot_stop);//robot stops for scanning
-            servo_RightMotor.writeMicroseconds(bot_stop);
+          if (holding_tesseract == true) {
+            GoHome();
+
+          }
+          else if (abs(current_magflux - previous_magflux) > 12) {//when good is picked up tesseract
+            holding_tesseract = true;
+            step1 = true;//initiates first step of GoHome function
+
+            left_wheel_prev = encoder_LeftMotor.getRawPosition();
+            right_wheel_prev = encoder_RightMotor.getRawPosition();
+            for (int i = pivot_pos; i <= 70; i++) {
+              pivot_pos = i;
+              delay(25);
+            }
+
 
           }
 
@@ -829,7 +887,6 @@ void loop() {
             }
 
           }
-
 
           //}
 
