@@ -523,7 +523,7 @@ bool step9 = false;
 bool step10 = false;
 bool step11 = false;
 bool step12 = false;
-
+bool clockwise1=true;
 void GoHome() { //after tesserack is collected, goes home to place tesseract and then returns to previous position
   left_wheel = encoder_LeftMotor.getRawPosition();
   right_wheel = encoder_RightMotor.getRawPosition();
@@ -641,18 +641,38 @@ void GoHome() { //after tesserack is collected, goes home to place tesseract and
 ///////Below functions are for mode 2
 void Mode2Scan()
 {
-
-  for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
+if (clockwise1==true)
+ {  for (pos = 40; pos <= 120; pos += 1) { // goes from 0 degrees to 180 degrees
     // in steps of 1 degree
-    servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
-    delay(15);                       // waits 15ms for the servo to reach the position
-    mag_field = analogRead(A0);
-    if (mag_field < 999)                 /*hall-effect sensor sensing value*/
-    {
-      break;
-    }
+  {  servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(50);        
+   current_magflux = analogRead(ci_Hall_Effect);
+       if(abs(current_magflux - previous_magflux) > 15)
+          {
+         timer2=true;
+        break;  }
+        }  // waits 15ms for the servo to reach the position
 
   }
+  clockwise1=false;
+ }
+ else{
+   for (pos = 120; pos >=40; pos -= 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+  {  servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(50);        
+   current_magflux = analogRead(ci_Hall_Effect);
+          if(abs(current_magflux - previous_magflux) > 15)
+          {
+          
+           timer2=true;
+             break;
+          }
+        }  // waits 15ms for the servo to reach the position
+
+  }
+ clockwise1=true;
+ }
 }
 void goback(int a)
 {
@@ -756,6 +776,7 @@ void loop() {
             Main operation code HERE
             Implementation of mode 1 operations of MSE 2202 Project
             /**************************************************************************************************************************************/
+    
           //testing code
           /* for (pos = 0; pos <= 90; pos += 1) { // goes from 0 degrees to 180 degrees
                 servo_turntable.write(pos);
@@ -900,93 +921,121 @@ void loop() {
       /*********************************Mode 2 coding***********************/
       case 2:
         {
-
-          /* if (timer<=4)     //5 tesseracts
+ if (bt_3_S_Time_Up)
+        {
+      //   servo_RightPivot.write(pivot_pos);
+       //  servo_LeftPivot.write(180 - pivot_pos);
+         if (timer<=4)     //5 tesseracts
             {
-            if(timer9==false)
+         if (timer9==false)
             {
-            for (int l = 0; l <=90 ;  l=l+ 10)
-            {                                       // goes from 0 degrees to 180 degrees
-                                                            // in steps of 10 degree
-            servo_RightPivot.writeMicroseconds(l);
-            servo_LeftPivot.writeMicroseconds(l);
-               delay(15);
+            for (int i = pivot_pos; i <= 42; i++) 
+            {
+          pivot_pos = i;
+          servo_RightPivot.write(pivot_pos);
+          servo_LeftPivot.write(180 - pivot_pos); 
             }
             timer9=true;
             }
-            /* Step1: make sure arm is at the same height as platform*/
+       
+                                                       //          Step1: make sure arm is at the same height as platform
 
-          if ((timer1 == false) && (timer9 == true))  /* Step2: car moving forward, close to platform
-  {
-    travel();
-    current = millis();
+         if ((timer1 == false) && (timer9 == true))  // Step2: car moving forward, close to platform
+  { timer1=true;
+   //             servo_RightMotor.writeMicroseconds(1750);
+   //             servo_LeftMotor.writeMicroseconds(1750);
+ /*   current = millis();
     previous = current;
     if(current-previous >3000)
     {
     timer1=true;
-    }
+    } */
   }
 
   if ((timer1==true)&&(timer2==false))
   {
   Mode2Scan();   //Step 3: Check if pick up tesseracts, if not keep scanning until hall-effect sensor changes
-  timer2=true;
   }
 
   if((timer2==true)&&(timer3==false))
-  {
+ // {
   // Go back 2 seconds
-  servo_LeftMotor.writeMicroseconds(1300);         //servo motor
-  servo_RightMotor.writeMicroseconds(1300);          //servo motor
-  current = millis();
-  previous = current;
-  }
-  if( (current-previous)>1000)
+//  servo_LeftMotor.writeMicroseconds(1300);         //servo motor
+//  servo_RightMotor.writeMicroseconds(1300);          //servo motor
+ // current = millis();
+ // if( (current-previous)>100)
       { timer3=true;}
-
+// previous = current;  
+//}
   if((timer3==true)&&(timer4==false))  //Step4: turn 90 degree clockwise
-  {
-    servo_LeftMotor.writeMicroseconds(1500);
-    servo_RightMotor.writeMicroseconds(1750);
-     if( (current-previous)>1000)
+ // {
+//    servo_LeftMotor.writeMicroseconds(1500);
+//    servo_RightMotor.writeMicroseconds(1750);
+  //   if( (current-previous)>1000)
       { timer4=true;}
-  }
+  //}
   if((timer4==true)&&(timer5==false))  //lower arm and go forward
   {
    if(lo==false)
-  {  for(int r=1500;r>=1200;r=r-10)                //lower arm, only execute once
+  { 
+    for(int p=180;p>=80;p=p-1)
+  {
+  servo_arm.write(p);
+  delay(15);
+  }
+    for(int r=150;r<=180;r=r+1)                //lower arm, only execute once
    {
-     servo_LeftPivot.writeMicroseconds(r);
-     servo_RightPivot.writeMicroseconds(r);
+     servo_LeftPivot.write(r);
+     servo_RightPivot.write(180-r);
+     delay(15);
+    }
+    for(int r= 40;r<=80;r++)
+    {
+    servo_turntable.write(r);
+    delay(15);
     }
    lo=true;
   }
+  
+  
    else
-  {
-    servo_LeftMotor.writeMicroseconds(1750);        //go forward and pass the gate(height limitations)
-    servo_RightMotor.writeMicroseconds(1750);
-  if( (current-previous)>1000)
+  
+ //   servo_LeftMotor.writeMicroseconds(1750);        //go forward and pass the gate(height limitations)
+ //   servo_RightMotor.writeMicroseconds(1750);
+ // if( (current-previous)>1000)
     {timer5=true;}
+  
   }
-  }
+  
   if((timer5==true)&&(timer6==false))
   {
-   for(int r=1200;r<=1900;r=r+10)                //pivot arm, only execute once
+   for(int r=0;r<=100;r=r+1)                //pivot arm, only execute once
    {
-   servo_RightPivot.writeMicroseconds(r);
-  servo_LeftPivot.writeMicroseconds(r);
+   servo_RightPivot.write(r);
+   servo_LeftPivot.write(180-r);
+   delay(15);
    }
-   for(int d=1500;d<=1800;d=d+10)               //flip arm, make tesseract face upside
+  
+  for(int d=80;d>=0;d=d-1)               //flip arm, make tesseract face upside
+  {
   servo_arm.writeMicroseconds(d);
-   for (int pos1 = 0; pos1 <= timer*30; pos1 += 1 )                                     //turntable rotates every time robot releases tesseracts
-   servo_turntable.write(pos);
-   for(int pos2 = 0; pos2 <= 180; pos2 += 1)                           //spin the magnet arm, release magnet,BOO!!!
-   servo_magnet.write(pos);
-
-   timer6=true;
+  delay(15);
   }
-
-  if((timer6==true)&&(timer7==false))   //robot back to default mode
+   for (int pos1 = 40; pos1 <= timer*15+40; pos1 -= 1 )                                     //turntable rotates every time robot releases tesseracts
+  {
+    servo_turntable.write(pos);
+   delay(15);
+ }
+ // for(int pos2 = 0; pos2 <= 180; pos2 += 1)                           //spin the magnet arm, release magnet,BOO!!!
+  // servo_magnet.write(pos);
+    servo_magnet.write(150);//drop
+    delay(2500);
+    servo_magnet.write(115);//return to orignal posittion
+    timer6=true;
+    delay(25000);
+  }
+        }
+/*  if((timer6==true)&&(timer7==false))   //robot back to default mode
   {
    servo_magnet.write(90);
    servo_turntable.write(timer*30);
@@ -1016,6 +1065,8 @@ void loop() {
   timer5=false;
   timer6=false;
   timer7=false;
+  current_magflux = analogRead(ci_Hall_Effect);
+  current_magflux = previous_magflux;
   }
   }
   else
@@ -1023,8 +1074,9 @@ void loop() {
   servo_LeftMotor.writeMicroseconds(1500);   //finish all stuff and stop
     servo_RightMotor.writeMicroseconds(1500);
 
-  }
-*/
+  }  */
+         
+        ui_Mode_Indicator_Index = 2;
             break;
         }
       case 3:    // Calibrate line tracker dark levels after 3 seconds
@@ -1146,5 +1198,6 @@ void loop() {
           Indicator();*/
       }
   }
+}
 }
 
