@@ -159,6 +159,7 @@ int pivot_pos = 28;
 
 /*****************************************************************SETUP************************************************************/
 void setup() {
+  //delay(10000);
   Wire.begin();
   //Serial.begin(9600);//comment this after finished debugging
 
@@ -523,7 +524,7 @@ bool step9 = false;
 bool step10 = false;
 bool step11 = false;
 bool step12 = false;
-bool clockwise1=true;
+bool clockwise1 = true;
 void GoHome() { //after tesserack is collected, goes home to place tesseract and then returns to previous position
   left_wheel = encoder_LeftMotor.getRawPosition();
   right_wheel = encoder_RightMotor.getRawPosition();
@@ -542,7 +543,7 @@ void GoHome() { //after tesserack is collected, goes home to place tesseract and
       //turn 90 degrees right
     }
     //do two 90 degree turns to go home....450 might not be correct
-    if ((abs(left_wheel - left_wheel_prev) >= 470) || (abs(right_wheel - right_wheel_prev) >= 470)) { //when quarter turn is complete might need to adjust value here
+    if ((abs(left_wheel - left_wheel_prev) >= 440) || (abs(right_wheel - right_wheel_prev) >= 440)) { //when quarter turn is complete might need to adjust value here
       servo_LeftMotor.writeMicroseconds(bot_stop);
       servo_RightMotor.writeMicroseconds(bot_stop);
       step1 = false;
@@ -571,7 +572,7 @@ void GoHome() { //after tesserack is collected, goes home to place tesseract and
     //turn 90 degrees left ward
 
     //do two 90 degree turns to go home....450 might not be correct
-    if ((abs(left_wheel - left_wheel_prev) >= 470) || (abs(right_wheel - right_wheel_prev) >= 470)) { //when quarter turn is complete might need to adjust value here
+    if ((abs(left_wheel - left_wheel_prev) >= 440) || (abs(right_wheel - right_wheel_prev) >= 440)) { //when quarter turn is complete might need to adjust value here
       servo_LeftMotor.writeMicroseconds(bot_stop);
       servo_RightMotor.writeMicroseconds(bot_stop);
       step3 = false;
@@ -630,6 +631,7 @@ void GoHome() { //after tesserack is collected, goes home to place tesseract and
       holding_tesseract = false;
       previous_magflux = analogRead(ci_Hall_Effect);
       current_magflux = previous_magflux;
+      num_turns = 0;//reset number of turns
 
     }
   }
@@ -637,42 +639,42 @@ void GoHome() { //after tesserack is collected, goes home to place tesseract and
 }
 
 
-
 ///////Below functions are for mode 2
 void Mode2Scan()
 {
-if (clockwise1==true)
- {  for (pos = 40; pos <= 120; pos += 1) { // goes from 0 degrees to 180 degrees
-    // in steps of 1 degree
-  {  servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
-    delay(50);        
-   current_magflux = analogRead(ci_Hall_Effect);
-       if(abs(current_magflux - previous_magflux) > 15)
-          {
-         timer2=true;
-        break;  }
-        }  // waits 15ms for the servo to reach the position
+  if (clockwise1 == true)
+  { for (pos = 40; pos <= 120; pos += 1) { // goes from 0 degrees to 180 degrees
+      // in steps of 1 degree
+      { servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
+        delay(50);
+        current_magflux = analogRead(ci_Hall_Effect);
+        if (abs(current_magflux - previous_magflux) > 15)
+        {
+          timer2 = true;
+          break;
+        }
+      }  // waits 15ms for the servo to reach the position
 
+    }
+    clockwise1 = false;
   }
-  clockwise1=false;
- }
- else{
-   for (pos = 120; pos >=40; pos -= 1) { // goes from 0 degrees to 180 degrees
-    // in steps of 1 degree
-  {  servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
-    delay(50);        
-   current_magflux = analogRead(ci_Hall_Effect);
-          if(abs(current_magflux - previous_magflux) > 15)
-          {
-          
-           timer2=true;
-             break;
-          }
-        }  // waits 15ms for the servo to reach the position
+  else {
+    for (pos = 120; pos >= 40; pos -= 1) { // goes from 0 degrees to 180 degrees
+      // in steps of 1 degree
+      { servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
+        delay(50);
+        current_magflux = analogRead(ci_Hall_Effect);
+        if (abs(current_magflux - previous_magflux) > 15)
+        {
 
+          timer2 = true;
+          break;
+        }
+      }  // waits 15ms for the servo to reach the position
+
+    }
+    clockwise1 = true;
   }
- clockwise1=true;
- }
 }
 void goback(int a)
 {
@@ -776,7 +778,7 @@ void loop() {
             Main operation code HERE
             Implementation of mode 1 operations of MSE 2202 Project
             /**************************************************************************************************************************************/
-    
+
           //testing code
           /* for (pos = 0; pos <= 90; pos += 1) { // goes from 0 degrees to 180 degrees
                 servo_turntable.write(pos);
@@ -805,23 +807,22 @@ void loop() {
             {
             servo_RightPivot.writeMicroseconds(i);
             servo_LeftPivot.writeMicroseconds(i);
-            }
+            }*/
 
-            if (ui_Left_Line_Tracker_Data>950)
+          /*if (ui_Left_Line_Tracker_Data > 950)
             {
-              p=100;
+            p = 100;
             }
-            if (ui_Middle_Line_Tracker_Data>950)
+            if (ui_Middle_Line_Tracker_Data > 950)
 
             {
-              q=100;
+            q = 100;
             }
 
-            if ((p==100)&&(q==100))
-             {
-                servo_RightMotor.writeMicroseconds(bot_stop);
-                servo_LeftMotor.writeMicroseconds(bot_stop);
-              }*/
+            if ((p == 100) && (q == 100))
+            {
+            holding_tesseract = true;
+            }*/
 
           //else {
 
@@ -892,7 +893,7 @@ void loop() {
             servo_LeftMotor.writeMicroseconds(bot_stop);//robot stops for scanning
             servo_RightMotor.writeMicroseconds(bot_stop);
 
-            if ((current_scan - previous_scan) > 40) {
+            if ((current_scan - previous_scan) > 30) {
               scan();
               current_scan = millis();
               previous_scan = current_scan;
@@ -921,283 +922,289 @@ void loop() {
       /*********************************Mode 2 coding***********************/
       case 2:
         {
- if (bt_3_S_Time_Up)
-        {
-      //   servo_RightPivot.write(pivot_pos);
-       //  servo_LeftPivot.write(180 - pivot_pos);
-         if (timer<=4)     //5 tesseracts
-            {
-         if (timer9==false)
-            {
-            for (int i = pivot_pos; i <= 42; i++) 
-            {
-          pivot_pos = i;
-          servo_RightPivot.write(pivot_pos);
-          servo_LeftPivot.write(180 - pivot_pos); 
-            }
-            timer9=true;
-            }
-       
-                                                       //          Step1: make sure arm is at the same height as platform
-
-         if ((timer1 == false) && (timer9 == true))  // Step2: car moving forward, close to platform
-  { timer1=true;
-   //             servo_RightMotor.writeMicroseconds(1750);
-   //             servo_LeftMotor.writeMicroseconds(1750);
- /*   current = millis();
-    previous = current;
-    if(current-previous >3000)
-    {
-    timer1=true;
-    } */
-  }
-
-  if ((timer1==true)&&(timer2==false))
-  {
-  Mode2Scan();   //Step 3: Check if pick up tesseracts, if not keep scanning until hall-effect sensor changes
-  }
-
-  if((timer2==true)&&(timer3==false))
- // {
-  // Go back 2 seconds
-//  servo_LeftMotor.writeMicroseconds(1300);         //servo motor
-//  servo_RightMotor.writeMicroseconds(1300);          //servo motor
- // current = millis();
- // if( (current-previous)>100)
-      { timer3=true;}
-// previous = current;  
-//}
-  if((timer3==true)&&(timer4==false))  //Step4: turn 90 degree clockwise
- // {
-//    servo_LeftMotor.writeMicroseconds(1500);
-//    servo_RightMotor.writeMicroseconds(1750);
-  //   if( (current-previous)>1000)
-      { timer4=true;}
-  //}
-  if((timer4==true)&&(timer5==false))  //lower arm and go forward
-  {
-   if(lo==false)
-  { 
-    for(int p=180;p>=80;p=p-1)
-  {
-  servo_arm.write(p);
-  delay(15);
-  }
-    for(int r=150;r<=180;r=r+1)                //lower arm, only execute once
-   {
-     servo_LeftPivot.write(r);
-     servo_RightPivot.write(180-r);
-     delay(15);
-    }
-    for(int r= 40;r<=80;r++)
-    {
-    servo_turntable.write(r);
-    delay(15);
-    }
-   lo=true;
-  }
-  
-  
-   else
-  
- //   servo_LeftMotor.writeMicroseconds(1750);        //go forward and pass the gate(height limitations)
- //   servo_RightMotor.writeMicroseconds(1750);
- // if( (current-previous)>1000)
-    {timer5=true;}
-  
-  }
-  
-  if((timer5==true)&&(timer6==false))
-  {
-   for(int r=0;r<=100;r=r+1)                //pivot arm, only execute once
-   {
-   servo_RightPivot.write(r);
-   servo_LeftPivot.write(180-r);
-   delay(15);
-   }
-  
-  for(int d=80;d>=0;d=d-1)               //flip arm, make tesseract face upside
-  {
-  servo_arm.writeMicroseconds(d);
-  delay(15);
-  }
-   for (int pos1 = 40; pos1 <= timer*15+40; pos1 -= 1 )                                     //turntable rotates every time robot releases tesseracts
-  {
-    servo_turntable.write(pos);
-   delay(15);
- }
- // for(int pos2 = 0; pos2 <= 180; pos2 += 1)                           //spin the magnet arm, release magnet,BOO!!!
-  // servo_magnet.write(pos);
-    servo_magnet.write(150);//drop
-    delay(2500);
-    servo_magnet.write(115);//return to orignal posittion
-    timer6=true;
-    delay(25000);
-  }
-        }
-/*  if((timer6==true)&&(timer7==false))   //robot back to default mode
-  {
-   servo_magnet.write(90);
-   servo_turntable.write(timer*30);
-   for(int d=1800;d>=1500;d=d-10)               //flip arm back
-   servo_arm.writeMicroseconds(d);
-   for(int r=1900;r>=1200;r=r-10)
-  {
-   servo_RightPivot.writeMicroseconds(r);
-   servo_LeftPivot.writeMicroseconds(r);
-  }
-   goback(3);
-   while(current-previous>1500)
-   {
-    servo_LeftMotor.writeMicroseconds(1750);
-    servo_RightMotor.writeMicroseconds(1500);
-   }
-
-   timer7=true;
-  }
-  if(timer7==true)
-  {
-    timer++;
-  timer1=false;
-  timer2=false;
-  timer3=false;
-  timer4=false;
-  timer5=false;
-  timer6=false;
-  timer7=false;
-  current_magflux = analogRead(ci_Hall_Effect);
-  current_magflux = previous_magflux;
-  }
-  }
-  else
-  {
-  servo_LeftMotor.writeMicroseconds(1500);   //finish all stuff and stop
-    servo_RightMotor.writeMicroseconds(1500);
-
-  }  */
-         
-        ui_Mode_Indicator_Index = 2;
-            break;
-        }
-      case 3:    // Calibrate line tracker dark levels after 3 seconds
-        {
           if (bt_3_S_Time_Up)
           {
-            if (!bt_Cal_Initialized)
+            //   servo_RightPivot.write(pivot_pos);
+            //  servo_LeftPivot.write(180 - pivot_pos);
+            if (timer <= 4)   //5 tesseracts
             {
-              bt_Cal_Initialized = true;
-              ui_Left_Line_Tracker_Dark = 0;
-              ui_Middle_Line_Tracker_Dark = 0;
-              ui_Right_Line_Tracker_Dark = 0;
-              ul_Calibration_Time = millis();
-              ui_Cal_Count = 0;
-            }
-            else if ((millis() - ul_Calibration_Time) > ci_Line_Tracker_Calibration_Interval)
-            {
-              ul_Calibration_Time = millis();
-              readLineTrackers();
-              ui_Left_Line_Tracker_Dark += ui_Left_Line_Tracker_Data;
-              ui_Middle_Line_Tracker_Dark += ui_Middle_Line_Tracker_Data;
-              ui_Right_Line_Tracker_Dark += ui_Right_Line_Tracker_Data;
-              ui_Cal_Count++;
-            }
-            if (ui_Cal_Count == ci_Line_Tracker_Cal_Measures)
-            {
-              ui_Left_Line_Tracker_Dark /= ci_Line_Tracker_Cal_Measures;
-              ui_Middle_Line_Tracker_Dark /= ci_Line_Tracker_Cal_Measures;
-              ui_Right_Line_Tracker_Dark /= ci_Line_Tracker_Cal_Measures;
-#ifdef DEBUG_LINE_TRACKER_CALIBRATION
-              Serial.print("Dark Levels: Left = ");
-              Serial.print(ui_Left_Line_Tracker_Dark, DEC);
-              Serial.print(", Middle = ");
-              Serial.print(ui_Middle_Line_Tracker_Dark, DEC);
-              Serial.print(", Right = ");
-              Serial.println(ui_Right_Line_Tracker_Dark, DEC);
-#endif
-              EEPROM.write(ci_Left_Line_Tracker_Dark_Address_L, lowByte(ui_Left_Line_Tracker_Dark));
-              EEPROM.write(ci_Left_Line_Tracker_Dark_Address_H, highByte(ui_Left_Line_Tracker_Dark));
-              EEPROM.write(ci_Middle_Line_Tracker_Dark_Address_L, lowByte(ui_Middle_Line_Tracker_Dark));
-              EEPROM.write(ci_Middle_Line_Tracker_Dark_Address_H, highByte(ui_Middle_Line_Tracker_Dark));
-              EEPROM.write(ci_Right_Line_Tracker_Dark_Address_L, lowByte(ui_Right_Line_Tracker_Dark));
-              EEPROM.write(ci_Right_Line_Tracker_Dark_Address_H, highByte(ui_Right_Line_Tracker_Dark));
-              ui_Robot_State_Index = 0;    // go back to Mode 0
-            }
-            ui_Mode_Indicator_Index = 3;
-          }
-          break;
-        }
-
-      case 4:    //Calibrate motor straightness after 3 seconds.
-        {
-          if (bt_3_S_Time_Up)
-          {
-            if (!bt_Cal_Initialized)
-            {
-              bt_Cal_Initialized = true;
-              encoder_LeftMotor.zero();
-              encoder_RightMotor.zero();
-              ul_Calibration_Time = millis();
-              servo_LeftMotor.writeMicroseconds(ui_Motors_Speed);
-              servo_RightMotor.writeMicroseconds(ui_Motors_Speed);
-            }
-            else if ((millis() - ul_Calibration_Time) > ci_Motor_Calibration_Time)
-            {
-              servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
-              servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
-              l_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
-              l_Right_Motor_Position = encoder_RightMotor.getRawPosition();
-              if (l_Left_Motor_Position > l_Right_Motor_Position)
+              if (timer9 == false)
               {
-                // May have to update this if different calibration time is used
-                ui_Right_Motor_Offset = 0;
-                ui_Left_Motor_Offset = (l_Left_Motor_Position - l_Right_Motor_Position) / 4;
+                for (int i = pivot_pos; i <= 42; i++)
+                {
+                  pivot_pos = i;
+                  servo_RightPivot.write(pivot_pos);
+                  servo_LeftPivot.write(180 - pivot_pos);
+                }
+                timer9 = true;
+              }
+
+              //          Step1: make sure arm is at the same height as platform
+
+              if ((timer1 == false) && (timer9 == true))  // Step2: car moving forward, close to platform
+              { timer1 = true;
+                //             servo_RightMotor.writeMicroseconds(1750);
+                //             servo_LeftMotor.writeMicroseconds(1750);
+                /*   current = millis();
+                   previous = current;
+                   if(current-previous >3000)
+                   {
+                   timer1=true;
+                   } */
+              }
+
+              if ((timer1 == true) && (timer2 == false))
+              {
+                Mode2Scan();   //Step 3: Check if pick up tesseracts, if not keep scanning until hall-effect sensor changes
+              }
+
+              if ((timer2 == true) && (timer3 == false))
+                // {
+                // Go back 2 seconds
+                //  servo_LeftMotor.writeMicroseconds(1300);         //servo motor
+                //  servo_RightMotor.writeMicroseconds(1300);          //servo motor
+                // current = millis();
+                // if( (current-previous)>100)
+              {
+                timer3 = true;
+              }
+              // previous = current;
+              //}
+              if ((timer3 == true) && (timer4 == false)) //Step4: turn 90 degree clockwise
+                // {
+                //    servo_LeftMotor.writeMicroseconds(1500);
+                //    servo_RightMotor.writeMicroseconds(1750);
+                //   if( (current-previous)>1000)
+              {
+                timer4 = true;
+              }
+              //}
+              if ((timer4 == true) && (timer5 == false)) //lower arm and go forward
+              {
+                if (lo == false)
+                {
+                  for (int p = 180; p >= 80; p = p - 1)
+                  {
+                    servo_arm.write(p);
+                    delay(15);
+                  }
+                  for (int r = 150; r <= 180; r = r + 1)     //lower arm, only execute once
+                  {
+                    servo_LeftPivot.write(r);
+                    servo_RightPivot.write(180 - r);
+                    delay(15);
+                  }
+                  for (int r = 40; r <= 80; r++)
+                  {
+                    servo_turntable.write(r);
+                    delay(15);
+                  }
+                  lo = true;
+                }
+
+
+                else
+
+                  //   servo_LeftMotor.writeMicroseconds(1750);        //go forward and pass the gate(height limitations)
+                  //   servo_RightMotor.writeMicroseconds(1750);
+                  // if( (current-previous)>1000)
+                {
+                  timer5 = true;
+                }
+
+              }
+
+              if ((timer5 == true) && (timer6 == false))
+              {
+                for (int r = 0; r <= 100; r = r + 1)     //pivot arm, only execute once
+                {
+                  servo_RightPivot.write(r);
+                  servo_LeftPivot.write(180 - r);
+                  delay(15);
+                }
+
+                for (int d = 80; d >= 0; d = d - 1)    //flip arm, make tesseract face upside
+                {
+                  servo_arm.writeMicroseconds(d);
+                  delay(15);
+                }
+                for (int pos1 = 40; pos1 <= timer * 15 + 40; pos1 -= 1 )                                 //turntable rotates every time robot releases tesseracts
+                {
+                  servo_turntable.write(pos);
+                  delay(15);
+                }
+                // for(int pos2 = 0; pos2 <= 180; pos2 += 1)                           //spin the magnet arm, release magnet,BOO!!!
+                // servo_magnet.write(pos);
+                servo_magnet.write(150);//drop
+                delay(2500);
+                servo_magnet.write(115);//return to orignal posittion
+                timer6 = true;
+                delay(25000);
+              }
+            }
+            /*  if((timer6==true)&&(timer7==false))   //robot back to default mode
+              {
+               servo_magnet.write(90);
+               servo_turntable.write(timer*30);
+               for(int d=1800;d>=1500;d=d-10)               //flip arm back
+               servo_arm.writeMicroseconds(d);
+               for(int r=1900;r>=1200;r=r-10)
+              {
+               servo_RightPivot.writeMicroseconds(r);
+               servo_LeftPivot.writeMicroseconds(r);
+              }
+               goback(3);
+               while(current-previous>1500)
+               {
+                servo_LeftMotor.writeMicroseconds(1750);
+                servo_RightMotor.writeMicroseconds(1500);
+               }
+
+               timer7=true;
+              }
+              if(timer7==true)
+              {
+                timer++;
+              timer1=false;
+              timer2=false;
+              timer3=false;
+              timer4=false;
+              timer5=false;
+              timer6=false;
+              timer7=false;
+              current_magflux = analogRead(ci_Hall_Effect);
+              current_magflux = previous_magflux;
+              }
               }
               else
               {
-                // May have to update this if different calibration time is used
-                ui_Right_Motor_Offset = (l_Right_Motor_Position - l_Left_Motor_Position) / 4;
-                ui_Left_Motor_Offset = 0;
-              }
+              servo_LeftMotor.writeMicroseconds(1500);   //finish all stuff and stop
+                servo_RightMotor.writeMicroseconds(1500);
 
-#ifdef DEBUG_MOTOR_CALIBRATION
-              Serial.print("Motor Offsets: Left = ");
-              Serial.print(ui_Left_Motor_Offset);
-              Serial.print(", Right = ");
-              Serial.println(ui_Right_Motor_Offset);
-#endif
-              EEPROM.write(ci_Right_Motor_Offset_Address_L, lowByte(ui_Right_Motor_Offset));
-              EEPROM.write(ci_Right_Motor_Offset_Address_H, highByte(ui_Right_Motor_Offset));
-              EEPROM.write(ci_Left_Motor_Offset_Address_L, lowByte(ui_Left_Motor_Offset));
-              EEPROM.write(ci_Left_Motor_Offset_Address_H, highByte(ui_Left_Motor_Offset));
+              }  */
 
-              ui_Robot_State_Index = 0;    // go back to Mode 0
-            }
-#ifdef DEBUG_MOTOR_CALIBRATION
-            Serial.print("Encoders L: ");
-            Serial.print(encoder_LeftMotor.getRawPosition());
-            Serial.print(", R: ");
-            Serial.println(encoder_RightMotor.getRawPosition());
-#endif
-            ui_Mode_Indicator_Index = 4;
+            ui_Mode_Indicator_Index = 2;
+            break;
           }
-          break;
-        }
-      }
+        case 3:    // Calibrate line tracker dark levels after 3 seconds
+          {
+            if (bt_3_S_Time_Up)
+            {
+              if (!bt_Cal_Initialized)
+              {
+                bt_Cal_Initialized = true;
+                ui_Left_Line_Tracker_Dark = 0;
+                ui_Middle_Line_Tracker_Dark = 0;
+                ui_Right_Line_Tracker_Dark = 0;
+                ul_Calibration_Time = millis();
+                ui_Cal_Count = 0;
+              }
+              else if ((millis() - ul_Calibration_Time) > ci_Line_Tracker_Calibration_Interval)
+              {
+                ul_Calibration_Time = millis();
+                readLineTrackers();
+                ui_Left_Line_Tracker_Dark += ui_Left_Line_Tracker_Data;
+                ui_Middle_Line_Tracker_Dark += ui_Middle_Line_Tracker_Data;
+                ui_Right_Line_Tracker_Dark += ui_Right_Line_Tracker_Data;
+                ui_Cal_Count++;
+              }
+              if (ui_Cal_Count == ci_Line_Tracker_Cal_Measures)
+              {
+                ui_Left_Line_Tracker_Dark /= ci_Line_Tracker_Cal_Measures;
+                ui_Middle_Line_Tracker_Dark /= ci_Line_Tracker_Cal_Measures;
+                ui_Right_Line_Tracker_Dark /= ci_Line_Tracker_Cal_Measures;
+#ifdef DEBUG_LINE_TRACKER_CALIBRATION
+                Serial.print("Dark Levels: Left = ");
+                Serial.print(ui_Left_Line_Tracker_Dark, DEC);
+                Serial.print(", Middle = ");
+                Serial.print(ui_Middle_Line_Tracker_Dark, DEC);
+                Serial.print(", Right = ");
+                Serial.println(ui_Right_Line_Tracker_Dark, DEC);
+#endif
+                EEPROM.write(ci_Left_Line_Tracker_Dark_Address_L, lowByte(ui_Left_Line_Tracker_Dark));
+                EEPROM.write(ci_Left_Line_Tracker_Dark_Address_H, highByte(ui_Left_Line_Tracker_Dark));
+                EEPROM.write(ci_Middle_Line_Tracker_Dark_Address_L, lowByte(ui_Middle_Line_Tracker_Dark));
+                EEPROM.write(ci_Middle_Line_Tracker_Dark_Address_H, highByte(ui_Middle_Line_Tracker_Dark));
+                EEPROM.write(ci_Right_Line_Tracker_Dark_Address_L, lowByte(ui_Right_Line_Tracker_Dark));
+                EEPROM.write(ci_Right_Line_Tracker_Dark_Address_H, highByte(ui_Right_Line_Tracker_Dark));
+                ui_Robot_State_Index = 0;    // go back to Mode 0
+              }
+              ui_Mode_Indicator_Index = 3;
+            }
+            break;
+          }
 
-      if ((millis() - ul_Display_Time) > ci_Display_Time)
-      {
-        ul_Display_Time = millis();
+        case 4:    //Calibrate motor straightness after 3 seconds.
+          {
+            if (bt_3_S_Time_Up)
+            {
+              if (!bt_Cal_Initialized)
+              {
+                bt_Cal_Initialized = true;
+                encoder_LeftMotor.zero();
+                encoder_RightMotor.zero();
+                ul_Calibration_Time = millis();
+                servo_LeftMotor.writeMicroseconds(ui_Motors_Speed);
+                servo_RightMotor.writeMicroseconds(ui_Motors_Speed);
+              }
+              else if ((millis() - ul_Calibration_Time) > ci_Motor_Calibration_Time)
+              {
+                servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+                servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+                l_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
+                l_Right_Motor_Position = encoder_RightMotor.getRawPosition();
+                if (l_Left_Motor_Position > l_Right_Motor_Position)
+                {
+                  // May have to update this if different calibration time is used
+                  ui_Right_Motor_Offset = 0;
+                  ui_Left_Motor_Offset = (l_Left_Motor_Position - l_Right_Motor_Position) / 4;
+                }
+                else
+                {
+                  // May have to update this if different calibration time is used
+                  ui_Right_Motor_Offset = (l_Right_Motor_Position - l_Left_Motor_Position) / 4;
+                  ui_Left_Motor_Offset = 0;
+                }
+
+#ifdef DEBUG_MOTOR_CALIBRATION
+                Serial.print("Motor Offsets: Left = ");
+                Serial.print(ui_Left_Motor_Offset);
+                Serial.print(", Right = ");
+                Serial.println(ui_Right_Motor_Offset);
+#endif
+                EEPROM.write(ci_Right_Motor_Offset_Address_L, lowByte(ui_Right_Motor_Offset));
+                EEPROM.write(ci_Right_Motor_Offset_Address_H, highByte(ui_Right_Motor_Offset));
+                EEPROM.write(ci_Left_Motor_Offset_Address_L, lowByte(ui_Left_Motor_Offset));
+                EEPROM.write(ci_Left_Motor_Offset_Address_H, highByte(ui_Left_Motor_Offset));
+
+                ui_Robot_State_Index = 0;    // go back to Mode 0
+              }
+#ifdef DEBUG_MOTOR_CALIBRATION
+              Serial.print("Encoders L: ");
+              Serial.print(encoder_LeftMotor.getRawPosition());
+              Serial.print(", R: ");
+              Serial.println(encoder_RightMotor.getRawPosition());
+#endif
+              ui_Mode_Indicator_Index = 4;
+            }
+            break;
+          }
+        }
+
+        if ((millis() - ul_Display_Time) > ci_Display_Time)
+        {
+          ul_Display_Time = millis();
 
 #ifdef DEBUG_MODE_DISPLAY
-        Serial.print("Mode: ");
-        Serial.println(ui_Mode_Indicator[ui_Mode_Indicator_Index], DEC);
+          Serial.print("Mode: ");
+          Serial.println(ui_Mode_Indicator[ui_Mode_Indicator_Index], DEC);
 #endif
-        /*bt_Heartbeat = !bt_Heartbeat;
-          CharliePlexM::Write(ci_Heartbeat_LED, bt_Heartbeat);
-          digitalWrite(13, bt_Heartbeat);
-          Indicator();*/
+          /*bt_Heartbeat = !bt_Heartbeat;
+            CharliePlexM::Write(ci_Heartbeat_LED, bt_Heartbeat);
+            digitalWrite(13, bt_Heartbeat);
+            Indicator();*/
+        }
       }
   }
-}
 }
 
