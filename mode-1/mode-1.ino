@@ -253,6 +253,8 @@ int p = 0;
 int q = 0;
 int previous = 0;
 int current = 0;
+int current1 = 0;
+int previous1 = 0;
 int previous_ping = 0;
 int current_ping = 0;
 int previous_scan = 0;
@@ -263,7 +265,7 @@ int previous_detect = 0;
 int current_detect = 0;
 
 bool holding_tesseract = false;
-
+bool temp = false;
 bool drive = true;
 int bot_speed = 1700;
 int bot_stop = 1500;
@@ -285,7 +287,7 @@ bool timer1 = false;
 bool timer2 = false;
 bool lo = false;
 bool timer3 = false; bool timer4 = false; bool timer5 = false; bool timer6 = false; bool timer7 = false;
-bool timer9 = false;
+bool timer9 = false; bool timer8 = false;
 void readLineTrackers()
 {
   ui_Left_Line_Tracker_Data = analogRead(ci_Left_Line_Tracker);
@@ -646,7 +648,7 @@ void Mode2Scan()
   { for (pos = 40; pos <= 120; pos += 1) { // goes from 0 degrees to 180 degrees
       // in steps of 1 degree
       { servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
-        delay(50);
+        delay(75);
         current_magflux = analogRead(ci_Hall_Effect);
         if (abs(current_magflux - previous_magflux) > 15)
         {
@@ -662,7 +664,7 @@ void Mode2Scan()
     for (pos = 120; pos >= 40; pos -= 1) { // goes from 0 degrees to 180 degrees
       // in steps of 1 degree
       { servo_turntable.write(pos);              // tell servo to go to position in variable 'pos'
-        delay(50);
+        delay(75);
         current_magflux = analogRead(ci_Hall_Effect);
         if (abs(current_magflux - previous_magflux) > 15)
         {
@@ -834,7 +836,7 @@ void loop() {
           servo_RightPivot.write(pivot_pos);
           servo_LeftPivot.write(180 - pivot_pos);
 
-          if ((current_detect - previous_detect) > 100) {//read hall effect sensor every 100 milliseconds
+          if ((current_detect - previous_detect) > 50) {//read hall effect sensor every 50 milliseconds
             current_magflux = analogRead(ci_Hall_Effect);
             previous_detect = current_detect;
           }
@@ -893,7 +895,7 @@ void loop() {
             servo_LeftMotor.writeMicroseconds(bot_stop);//robot stops for scanning
             servo_RightMotor.writeMicroseconds(bot_stop);
 
-            if ((current_scan - previous_scan) > 30) {
+            if ((current_scan - previous_scan) > 40) {
               scan();
               current_scan = millis();
               previous_scan = current_scan;
@@ -924,61 +926,70 @@ void loop() {
         {
           if (bt_3_S_Time_Up)
           {
+            current1 = millis();
+            Ping_Front();
             //   servo_RightPivot.write(pivot_pos);
             //  servo_LeftPivot.write(180 - pivot_pos);
             if (timer <= 4)   //5 tesseracts
             {
               if (timer9 == false)
               {
-                for (int i = pivot_pos; i <= 42; i++)
+                for (int i = pivot_pos; i <= 40; i++)
                 {
                   pivot_pos = i;
                   servo_RightPivot.write(pivot_pos);
                   servo_LeftPivot.write(180 - pivot_pos);
                 }
                 timer9 = true;
+                //    previous1 = current1;
               }
 
               //          Step1: make sure arm is at the same height as platform
 
               if ((timer1 == false) && (timer9 == true))  // Step2: car moving forward, close to platform
-              { timer1 = true;
-                //             servo_RightMotor.writeMicroseconds(1750);
-                //             servo_LeftMotor.writeMicroseconds(1750);
-                /*   current = millis();
-                   previous = current;
-                   if(current-previous >3000)
-                   {
-                   timer1=true;
-                   } */
+              {
+                if ((ul_Echo_Time_Front / 24) <= 32 && (ul_Echo_Time_Front / 24) > 0)
+                {
+                  servo_RightMotor.writeMicroseconds(1500);
+                  servo_LeftMotor.writeMicroseconds(1500);
+                  // previous1 = current1;
+                  timer1 = true;
+                }
+                else
+                {
+                  servo_LeftMotor.writeMicroseconds(1750);
+                  servo_RightMotor.writeMicroseconds(1750);
+                }
               }
 
               if ((timer1 == true) && (timer2 == false))
               {
-                Mode2Scan();   //Step 3: Check if pick up tesseracts, if not keep scanning until hall-effect sensor changes
+                Mode2Scan();
+                previous1 = current1; //Step 3: Check if pick up tesseracts, if not keep scanning until hall-effect sensor changes
               }
 
               if ((timer2 == true) && (timer3 == false))
-                // {
-                // Go back 2 seconds
-                //  servo_LeftMotor.writeMicroseconds(1300);         //servo motor
-                //  servo_RightMotor.writeMicroseconds(1300);          //servo motor
-                // current = millis();
-                // if( (current-previous)>100)
               {
-                timer3 = true;
+                if ((current1 - previous1) >= 3850)
+                {
+                  servo_RightMotor.writeMicroseconds(1500);
+                  servo_LeftMotor.writeMicroseconds(1500);
+                  previous1 = current1;
+                  timer3 = true;
+                }
+                else
+                {
+                  servo_RightMotor.writeMicroseconds(bot_stop - 100);//moves left wheel backward
+                  servo_LeftMotor.writeMicroseconds(bot_stop + 100);
+                }
+                //Step4: turn 90 degree clockwise
               }
-              // previous = current;
-              //}
-              if ((timer3 == true) && (timer4 == false)) //Step4: turn 90 degree clockwise
-                // {
-                //    servo_LeftMotor.writeMicroseconds(1500);
-                //    servo_RightMotor.writeMicroseconds(1750);
-                //   if( (current-previous)>1000)
+              if ((timer3 == true) && (timer4 == false))
               {
                 timer4 = true;
               }
-              //}
+
+
               if ((timer4 == true) && (timer5 == false)) //lower arm and go forward
               {
                 if (lo == false)
@@ -994,94 +1005,133 @@ void loop() {
                     servo_RightPivot.write(180 - r);
                     delay(15);
                   }
-                  for (int r = 40; r <= 80; r++)
+                  for (int r = 43; r <= 80; r++)
                   {
                     servo_turntable.write(r);
                     delay(15);
                   }
+                  previous1 = current1;
                   lo = true;
                 }
 
 
                 else
 
-                  //   servo_LeftMotor.writeMicroseconds(1750);        //go forward and pass the gate(height limitations)
-                  //   servo_RightMotor.writeMicroseconds(1750);
-                  // if( (current-previous)>1000)
-                {
-                  timer5 = true;
-                }
-
+                  if ((current1 - previous1) >= 5000)
+                  {
+                    servo_RightMotor.writeMicroseconds(1500);
+                    servo_LeftMotor.writeMicroseconds(1500);
+                    previous1 = current1;
+                    timer5 = true;
+                  }
+                  else
+                  {
+                    servo_LeftMotor.writeMicroseconds(1750);
+                    servo_RightMotor.writeMicroseconds(1750);
+                  }
               }
 
               if ((timer5 == true) && (timer6 == false))
               {
-                for (int r = 0; r <= 100; r = r + 1)     //pivot arm, only execute once
+                for (int r = 0; r <= 80; r = r + 1)     //pivot arm, only execute once
                 {
                   servo_RightPivot.write(r);
                   servo_LeftPivot.write(180 - r);
                   delay(15);
                 }
 
-                for (int d = 80; d >= 0; d = d - 1)    //flip arm, make tesseract face upside
+                for (int d = 170; d >= 20; d = d - 1)    //flip arm, make tesseract face upside
                 {
                   servo_arm.writeMicroseconds(d);
                   delay(15);
                 }
-                for (int pos1 = 40; pos1 <= timer * 15 + 40; pos1 -= 1 )                                 //turntable rotates every time robot releases tesseracts
+                for (int pos1 = 40; pos1 <= timer * 15 + 40; pos1 += 1 )                                 //turntable rotates every time robot releases tesseracts
                 {
                   servo_turntable.write(pos);
                   delay(15);
                 }
-                // for(int pos2 = 0; pos2 <= 180; pos2 += 1)                           //spin the magnet arm, release magnet,BOO!!!
-                // servo_magnet.write(pos);
+                // for(int pos2 = 115; pos2 <= 150; pos2 += 1)                           //spin the magnet arm, release magnet,BOO!!!
                 servo_magnet.write(150);//drop
                 delay(2500);
-                servo_magnet.write(115);//return to orignal posittion
-                timer6 = true;
-                delay(25000);
-              }
-            }
-            /*  if((timer6==true)&&(timer7==false))   //robot back to default mode
-              {
-               servo_magnet.write(90);
-               servo_turntable.write(timer*30);
-               for(int d=1800;d>=1500;d=d-10)               //flip arm back
-               servo_arm.writeMicroseconds(d);
-               for(int r=1900;r>=1200;r=r-10)
-              {
-               servo_RightPivot.writeMicroseconds(r);
-               servo_LeftPivot.writeMicroseconds(r);
-              }
-               goback(3);
-               while(current-previous>1500)
-               {
-                servo_LeftMotor.writeMicroseconds(1750);
-                servo_RightMotor.writeMicroseconds(1500);
-               }
 
-               timer7=true;
+                timer6 = true;
+
               }
-              if(timer7==true)
+
+              if ((timer6 == true) && (timer8 == false)) //robot back to default mode
+              {
+
+                if (temp == false)
+                {
+                  servo_magnet.write(115);//drop
+                  delay(1000);
+                  for (int pos1 = timer * 15 + 40; pos1 >= 41; pos1 -= 1 )                             //turntable rotates every time robot releases tesseracts
+                  {
+                    servo_turntable.write(pos);
+                    delay(15);
+                  }
+                  for (int d = 20; d <= 170; d = d + 1)  //flip arm, make tesseract face upside
+                  {
+                    servo_arm.write(d);
+                    delay(15);
+                  }
+                  for (int r = 100; r >= 28; r = r - 1)    //pivot arm, only execute once
+                  {
+                    servo_RightPivot.write(r);
+                    servo_LeftPivot.write(180 - r);
+                    delay(15);
+                  }
+                  temp = true;
+                  previous1 = current1;
+                }
+                else
+                {
+                  if ((current1 - previous1) >3500)
+                  {
+                    servo_RightMotor.writeMicroseconds(1500);
+                    servo_LeftMotor.writeMicroseconds(1500);
+                    previous1 = current1;
+                    timer8 = true;
+                  }
+                  else
+                  {
+                    servo_RightMotor.writeMicroseconds(1350);
+                    servo_LeftMotor.writeMicroseconds(1350);
+                  }
+                }
+              }
+              if ((timer8 == true) && (timer7 == false))
+              {
+                if ((current1 - previous1) >= 1850)
+                {
+                  servo_RightMotor.writeMicroseconds(1500);
+                  servo_LeftMotor.writeMicroseconds(1500);
+                  previous1 = current1;
+                  timer7 = true;
+                }
+                else
+                {
+                  servo_RightMotor.writeMicroseconds(bot_stop + 100);//moves left wheel backward
+                  servo_LeftMotor.writeMicroseconds(bot_stop - 100);
+                }
+              }
+              if (timer7 == true)
               {
                 timer++;
-              timer1=false;
-              timer2=false;
-              timer3=false;
-              timer4=false;
-              timer5=false;
-              timer6=false;
-              timer7=false;
-              current_magflux = analogRead(ci_Hall_Effect);
-              current_magflux = previous_magflux;
+                timer1 = false;
+                timer2 = false;
+                timer3 = false;
+                timer4 = false;
+                timer5 = false;
+                timer6 = false;
+                timer7 = false;
+                timer8 = false;
+                current_magflux = analogRead(ci_Hall_Effect);
+                previous_magflux = current_magflux;
+                previous1 = current1;
               }
-              }
-              else
-              {
-              servo_LeftMotor.writeMicroseconds(1500);   //finish all stuff and stop
-                servo_RightMotor.writeMicroseconds(1500);
+            }
 
-              }  */
 
             ui_Mode_Indicator_Index = 2;
             break;
